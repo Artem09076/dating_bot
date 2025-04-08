@@ -7,6 +7,13 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.12"
+aiogram = "^3.19.0"
+pydantic-settings = "^2.8.1"
+fastapi = "^0.115.12"
+sqlalchemy = "^2.0.40"
+asyncpg = "^0.30.0"
+aio-pika = "^9.5.5"
+msgpack = "^1.1.0"
 
 
 [build-system]
