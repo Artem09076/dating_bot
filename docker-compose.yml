@@ -59,4 +59,6 @@ services:
     volumes:
       - .:/code
 
-
+volumes:
+  database-data:
+    driver: local
