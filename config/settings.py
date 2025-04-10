@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     def rabbit_url(self) -> str:
         return f'amqp://{self.RABBIT_USER}:{self.RABBIT_PASSWORD}@{self.RABBIT_HOST}:{self.RABBIT_PORT}/'
 
-    model_config = SettingsConfigDict(env_file='config/.env', env_file_encoding='utf-8')
+    model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8')
 
 
 settings = Settings()

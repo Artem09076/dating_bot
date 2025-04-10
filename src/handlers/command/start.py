@@ -8,4 +8,4 @@ from src.templates.env import render
 
 @router.message(Command('start'))
 async def start(message: Message, state: FSMContext) -> None:
-    await message.answer(render('start.jinja2'))
+    await message.answer(render('start.jinja2', user=message.from_user))

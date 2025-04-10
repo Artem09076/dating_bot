@@ -4,6 +4,8 @@ from fastapi import FastAPI
 from typing import AsyncIterator
 from src.bot import bot, dp
 from config.settings import settings
+from src.api.router import router
+import uvicorn
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -27,4 +29,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 def create_app() -> FastAPI:
     app = FastAPI(docs_url='/swagger', lifespan=lifespan)
+    app.include_router(router)
     return app
+
+if __name__ == '__main__':
+    uvicorn.run('src.app:create_app', factory=True, host='0.0.0.0', port=8001, workers=1)
