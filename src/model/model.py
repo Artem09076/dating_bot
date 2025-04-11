@@ -14,13 +14,13 @@ class User(Base):
     __tablename__ = "user"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    username: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String, nullable=False)
     age: Mapped[int] = mapped_column(nullable=False)
     gender: Mapped[GenderEnum] = mapped_column(Enum(GenderEnum), nullable=False)
     city: Mapped[str] = mapped_column(nullable=True)
     interests: Mapped[str] = mapped_column(nullable=True)
     profile_filled: Mapped[bool] = mapped_column(default=False)
-    photo_count: Mapped[int] = mapped_column(default=0)
+    photo: Mapped[str] = mapped_column(String(255))
     preferred_age_min: Mapped[int] = mapped_column()
     preferred_age_max: Mapped[int] = mapped_column()
     preferred_gender: Mapped[GenderEnum] = mapped_column(Enum(GenderEnum))
