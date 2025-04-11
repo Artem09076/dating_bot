@@ -16,7 +16,7 @@ async def start_profile_creation(call: CallbackQuery, state: FSMContext) -> None
         await call.message.answer("Как тебя зовут?")
     await state.set_state(ProfileForm.name)
 
-@router.callback_query(F.text, ProfileForm.name)
+@router.message(F.text, ProfileForm.name)
 async def process_name(message: Message, state: FSMContext) -> None:
     if message.text and not message.text.isdigit():
         await state.update_data(name=message.text)

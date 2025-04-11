@@ -12,3 +12,4 @@ class ProfileForm(StatesGroup):
     preferred_age_max = State()
     preferred_city = State()
     profile_filled = State()
+    check_state = State()

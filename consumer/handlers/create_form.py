@@ -6,7 +6,7 @@ from src.model.model import User
 from src.storage.db import async_session
 
 
-async def create_recipe(body: Dict[str, Any]) -> None:
+async def create_form(body: Dict[str, Any]) -> None:
     async with async_session() as db:
         result = await db.execute(select(User).where(User.id == body.get('id')))
         user = result.scalar_one()
