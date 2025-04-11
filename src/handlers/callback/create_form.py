@@ -1,14 +1,15 @@
 import aio_pika
 import msgpack
 from aiogram import F
-from aiogram.types import Message, ReplyKeyboardMarkup, CallbackQuery, KeyboardButton
+from aiogram.types import Message, InlineKeyboardMarkup, CallbackQuery, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 from src.storage.rabbit import channel_pool
 from aio_pika import ExchangeType
 from src.handlers.callback.router import router
 from src.handlers.state.made_form import ProfileForm
+from src.handlers.command.gender import gender_keyboard
 
-@router.callback_query(F.data == "⚙️ Создать анкету")
+@router.callback_query(F.data == "make_form")
 async def start_profile_creation(call: CallbackQuery, state: FSMContext) -> None:
     await state.clear()
     if isinstance(call.message, Message):
@@ -26,30 +27,32 @@ async def process_name(message: Message, state: FSMContext) -> None:
         if isinstance(message, Message):
             await message.answer('Кажется вы ввели число. Напишите свое имя')
 
-
 @router.message(F.text, ProfileForm.age)
 async def process_age(message: Message, state: FSMContext) -> None:
-    if message.text and not message.text.isdigit():
-        await state.update_data(age=message.text)
-        if isinstance(message, Message):
-            await message.answer("Укажи свой пол (м/ж):")
+    if message.text.isdigit():
+        await state.update_data(age=int(message.text))
+        await message.answer("Укажи свой пол:", reply_markup=gender_keyboard)
         await state.set_state(ProfileForm.gender)
     else:
-        if isinstance(message, Message):
-            await message.answer('Кажется вы ввели число. Напишите ваш пол')
+        await message.answer("Пожалуйста, укажи возраст числом.")
 
 
-@router.message(F.text, ProfileForm.gender)
-async def process_gender(message: Message, state: FSMContext) -> None:
-    if message.text and not message.text.isdigit():
-        await state.update_data(gender=message.text)
-        if isinstance(message, Message):
-            await message.answer("Из какого ты города?")
+@router.callback_query(F.data.startswith("gender_"), ProfileForm.gender)
+async def process_gender(callback: CallbackQuery, state: FSMContext) -> None:
+    gender_map = {
+        "gender_male": "male",
+        "gender_female": "female",
+        "gender_other": "other"
+    }
+
+    gender = gender_map.get(callback.data)
+    if gender:
+        await state.update_data(gender=gender)
+        await callback.message.edit_reply_markup(reply_markup=None)
+        await callback.message.answer("Из какого ты города?")
         await state.set_state(ProfileForm.city)
     else:
-        if isinstance(message, Message):
-            await message.answer('Кажется вы ввели число. Напишите ваш город')
-
+        await callback.answer("Некорректный выбор", show_alert=True)
 
 @router.message(F.text, ProfileForm.city)
 async def process_city(message: Message, state: FSMContext):
@@ -145,24 +148,12 @@ async def process_preferred_city(message: Message, state: FSMContext) -> None:
         f"город: {user_data.get('preferred_city')})",
     )
 
-    await message.answer(
-        f"Твоя анкета готова! 🎉\n\n"
-        f"👤 Имя: {user_data['name']}\n"
-        f"🎂 Возраст: {user_data['age']}\n"
-        f"⚧ Пол: {user_data['gender']}\n"
-        f"📍 Город: {user_data['city']}\n"
-        f"🎯 Интересы: {user_data['interests']}\n\n"
-        f"🔍 Ищет: {user_data['preferred_gender']} "
-        f"({user_data['preferred_age_min']}-{user_data['preferred_age_max']} лет, "
-        f"город: {user_data['preferred_city']})",
-    )
-
     menu_list = [
-        [KeyboardButton(text='✅Все верно', callback_data='correct')],
-        [KeyboardButton(text='❌Заполнить сначала', callback_data='incorrect')],
+        [InlineKeyboardButton(text='✅Все верно', callback_data='correct')],
+        [InlineKeyboardButton(text='❌Заполнить сначала', callback_data='incorrect')],
     ]
 
-    keyboard = ReplyKeyboardMarkup(keyboard=menu_list)
+    keyboard = InlineKeyboardMarkup(keyboard=menu_list)
     if isinstance(message, Message):
         await message.answer(caption, reply_markup=keyboard)
     await state.set_state(ProfileForm.profile_filled)

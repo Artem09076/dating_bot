@@ -15,9 +15,3 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     yield
     task.cancel()
-
-
-def create_app() -> FastAPI:
-    app = FastAPI(docs_url='/swagger', lifespan=lifespan)
-    app.include_router(tech_router, prefix='', tags=['tech'])
-    return app
