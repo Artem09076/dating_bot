@@ -46,18 +46,18 @@ services:
     volumes:
       - .:/code
 
-  # consumer:
-  #   build:
-  #     dockerfile: Dockerfile
-  #     context: .
-  #   command: uvicorn consumer.web_app:create_app --factory --host 0.0.0.0 --port 8010 --workers=1
-  #   ports:
-  #     - "8090:8010"
-  #   depends_on:
-  #     rabbitmq:
-  #       condition: service_healthy
-  #   volumes:
-  #     - .:/code
+  consumer:
+    build:
+      dockerfile: Dockerfile
+      context: .
+    command: uvicorn consumer.web_app:create_app --factory --host 0.0.0.0 --port 8010 --workers=1
+    ports:
+      - "8090:8010"
+    depends_on:
+      rabbitmq:
+         condition: service_healthy
+    volumes:
+       - .:/code
 
 volumes:
   database-data:
