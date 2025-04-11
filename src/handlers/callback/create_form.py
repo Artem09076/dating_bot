@@ -27,20 +27,6 @@ async def process_name(message: Message, state: FSMContext) -> None:
             await message.answer('Кажется вы ввели число. Напишите свое имя')
 
 
-
-@router.message(F.text, RecipeGroup.recipe_title)
-@track_latency('create_recipe_recipe_title')
-async def create_recipe_recipe_title(message: Message, state: FSMContext) -> None:
-    if message.text and not message.text.isdigit():
-        await state.update_data(recipe_title=message.text)
-        if isinstance(message, Message):
-            await message.answer('Спасибо! А теперь какие ингредиенты нам нужны')
-        await state.set_state(RecipeGroup.ingredients)
-    else:
-        if isinstance(message, Message):
-            await message.answer('Кажется вы ввели число. Напишите название рецепта')
-
-
 @router.message(F.text, ProfileForm.age)
 async def process_age(message: Message, state: FSMContext) -> None:
     if message.text and not message.text.isdigit():
