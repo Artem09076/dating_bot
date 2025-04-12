@@ -92,12 +92,7 @@ async def process_photo(message: Message, state: FSMContext) -> None:
         )
 
         file_url = f"{settings.minio_url}/{file_path}"
-        db: Session = next(get_db())
-        user = db.query(User).filter(User.id == message.from_user.id).first()
-
-        if user:
-            user.photo = file_url
-            db.commit()
+        await state.update_data(photos=file_url)
         await message.answer(f"Фото успешно загружено!")
         await state.set_state(ProfileForm.preferred_gender)
     else:
@@ -153,6 +148,7 @@ async def process_preferred_city(message: Message, state: FSMContext) -> None:
         f"⚧ Пол: {user_data.get('gender')}\n"
         f"📍 Город: {user_data.get('city')}\n"
         f"🎯 Интересы: {user_data.get('interests')}\n\n"
+        f"Фото: {user_data.get('photos')}"
         f"🔍 Ищет: {user_data.get('preferred_gender')} "
         f"({user_data.get('preferred_age_min')}-{user_data.get('preferred_age_max')} лет, "
         f"город: {user_data.get('preferred_city')})",
@@ -187,6 +183,7 @@ async def create_form_correct(call: CallbackQuery, state: FSMContext) -> None:
             'gender': user_data.get('gender'),
             'city': user_data.get('city'),
             'interests': interests,
+            'photo': user_data.get('photos'),
             'preferred_gender': user_data.get('preferred_gender'),
             'preferred_age_min': user_data.get('preferred_age_min'),
             'preferred_age_max': user_data.get('preferred_age_max'),
