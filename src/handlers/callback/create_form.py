@@ -13,6 +13,19 @@ from config.settings import settings
 from src.model.model import User
 from src.storage.db import get_db
 from sqlalchemy.orm import Session
+import re
+
+def safe_bucket_name(user_id: int, file_id: str) -> str:
+    name = f"photo-{user_id}-{file_id}".lower()
+    name = re.sub(r"[^a-z0-9.-]", "-", name)
+    name = re.sub(r"\.\.+", ".", name)
+    name = re.sub(r"-\.+|\.-+", "-", name)
+    name = name[:63]
+    name = name.strip(".-")
+    if len(name) < 3:
+        name = f"ph-{user_id}"
+
+    return name
 
 @router.callback_query(F.data == "make_form")
 async def start_profile_creation(call: CallbackQuery, state: FSMContext) -> None:
@@ -82,16 +95,24 @@ async def process_interests(message: Message, state: FSMContext) -> None:
 @router.message(F.photo, ProfileForm.photo)
 async def process_photo(message: Message, state: FSMContext) -> None:
     if message.photo:
-        file_info = await message.photo[-1].get_file()
-        file_path = f"user_{message.from_user.id}/profile_photo.jpg"
+        file_id = message.photo[-1].file_id
+        user_id = message.from_user.id
+        file_name = f"photo_{message.from_user.id}_{file_id}"
+        file = await message.bot.get_file(file_id)
+        file_bytes = await message.bot.download_file(file.file_path)
+        bucket_name = settings.MINIO_BUCKET.format(user_id=user_id)
+        if not minio_client.bucket_exists(bucket_name):
+            minio_client.make_bucket(bucket_name)
+ 
         minio_client.put_object(
-            settings.MINIO_BUCKET, 
-            file_path, 
-            file_info.file, 
-            file_info.file_size
+            bucket_name=bucket_name, 
+            object_name=file_name, 
+            data=file_bytes, 
+            length=file.file_size,
+            content_type="image/jpeg"
         )
 
-        file_url = f"{settings.minio_url}/{file_path}"
+        file_url = f"{settings.minio_url}/{file_name}"
         await state.update_data(photos=file_url)
         await message.answer(f"Фото успешно загружено!")
         await state.set_state(ProfileForm.preferred_gender)

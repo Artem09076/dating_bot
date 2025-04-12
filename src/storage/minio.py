@@ -8,6 +8,3 @@ minio_client = Minio(
     secure=False
 )
 
-if not minio_client.bucket_exists(settings.MINIO_BUCKET):
-    minio_client.make_bucket(settings.MINIO_BUCKET)
- 

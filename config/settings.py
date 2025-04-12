@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     MINIO_ENDPOINT: str
     MINIO_ACCESS_KEY: str
     MINIO_SECRET_KEY: str
-    MINIO_BUCKET: str = 'photos'
+    MINIO_BUCKET: str = 'photos-{user_id}'
 
     USER_QUEUE: str = 'user_receipts.{user_id}'
 
