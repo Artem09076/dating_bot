@@ -68,7 +68,7 @@ async def process_city(message: Message, state: FSMContext):
         await state.set_state(ProfileForm.interests)
     else:
         if isinstance(message, Message):
-            await message.answer('Кажется вы ввели число. Напишите ваши интересы')
+            await message.answer('Кажется вы ввели число. Напишите ваш город')
 
 @router.message(F.text, ProfileForm.interests)
 async def process_interests(message: Message, state: FSMContext) -> None:
