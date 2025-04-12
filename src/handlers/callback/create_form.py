@@ -8,6 +8,11 @@ from aio_pika import ExchangeType
 from src.handlers.callback.router import router
 from src.handlers.state.made_form import ProfileForm
 from src.handlers.command.gender import gender_keyboard
+from src.storage.minio import minio_client
+from config.settings import settings
+from src.model.model import User
+from src.storage.db import get_db
+from sqlalchemy.orm import Session
 
 @router.callback_query(F.data == "make_form")
 async def start_profile_creation(call: CallbackQuery, state: FSMContext) -> None:
@@ -63,36 +68,36 @@ async def process_city(message: Message, state: FSMContext):
         await state.set_state(ProfileForm.interests)
     else:
         if isinstance(message, Message):
-            await message.answer('Кажется вы ввели число. Напишите ваши интересы')
-
+            await message.answer('Кажется вы ввели число. Напишите ваш город')
 
 @router.message(F.text, ProfileForm.interests)
 async def process_interests(message: Message, state: FSMContext) -> None:
     if message.text and not message.text.isdigit():
         await state.update_data(interests=message.text)
-        if isinstance(message, Message):
-            await message.answer("Отправь своё фото:")
+        await message.answer("Отправь своё фото:")
         await state.set_state(ProfileForm.photo)
     else:
-        if isinstance(message, Message):
-            await message.answer('Кажется вы ввели текст. Отправьте ваше фото')
+        await message.answer('Кажется вы ввели текст. Отправьте ваше фото')
 
-
-@router.message(F.text, ProfileForm.photo)
+@router.message(F.photo, ProfileForm.photo)
 async def process_photo(message: Message, state: FSMContext) -> None:
-    if not message.photo:
-        await message.answer("Пожалуйста, отправь именно фото 📷")
-        return
+    if message.photo:
+        file_info = await message.photo[-1].get_file()
+        file_path = f"user_{message.from_user.id}/profile_photo.jpg"
+        minio_client.put_object(
+            settings.MINIO_BUCKET, 
+            file_path, 
+            file_info.file, 
+            file_info.file_size
+        )
 
-    photo_id = message.photo[-1].file_id
-    if message.text and not message.text.isdigit():
-        await state.update_data(photo=photo_id)
-        if isinstance(message, Message):
-            await message.answer("Кого ты ищешь? (м/ж/все):")
+        file_url = f"{settings.minio_url}/{file_path}"
+        await state.update_data(photos=file_url)
+        await message.answer(f"Фото успешно загружено!")
         await state.set_state(ProfileForm.preferred_gender)
     else:
-        if isinstance(message, Message):
-            await message.answer('Кажется вы ввели число. Напишите пол парнтера, которого вы ищите')
+        await message.answer("Пожалуйста, отправь именно фото")
+
 
 @router.message(F.text, ProfileForm.preferred_gender)
 async def process_preferred_gender(message: Message, state: FSMContext) -> None:
@@ -143,6 +148,7 @@ async def process_preferred_city(message: Message, state: FSMContext) -> None:
         f"⚧ Пол: {user_data.get('gender')}\n"
         f"📍 Город: {user_data.get('city')}\n"
         f"🎯 Интересы: {user_data.get('interests')}\n\n"
+        f"Фото: {user_data.get('photos')}"
         f"🔍 Ищет: {user_data.get('preferred_gender')} "
         f"({user_data.get('preferred_age_min')}-{user_data.get('preferred_age_max')} лет, "
         f"город: {user_data.get('preferred_city')})",
@@ -177,6 +183,7 @@ async def create_form_correct(call: CallbackQuery, state: FSMContext) -> None:
             'gender': user_data.get('gender'),
             'city': user_data.get('city'),
             'interests': interests,
+            'photo': user_data.get('photos'),
             'preferred_gender': user_data.get('preferred_gender'),
             'preferred_age_min': user_data.get('preferred_age_min'),
             'preferred_age_max': user_data.get('preferred_age_max'),

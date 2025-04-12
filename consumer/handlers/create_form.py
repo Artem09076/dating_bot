@@ -18,6 +18,7 @@ async def create_form(body: Dict[str, Any]) -> None:
             gender=body.get('gender'),
             city=body.get('city'),
             interests=body.get('interests'),
+            photo=body.get('photos'),
             preferred_gender=body.get('preferred_gender'),
             preferred_age_min=body.get('preferred_age_min'),
             preferred_age_max=body.get('preferred_age_max'),
