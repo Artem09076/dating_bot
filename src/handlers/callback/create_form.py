@@ -8,6 +8,11 @@ from aio_pika import ExchangeType
 from src.handlers.callback.router import router
 from src.handlers.state.made_form import ProfileForm
 from src.handlers.command.gender import gender_keyboard
+from src.storage.minio import minio_client
+from config.settings import settings
+from src.model.model import User
+from src.storage.db import get_db
+from sqlalchemy.orm import Session
 
 @router.callback_query(F.data == "make_form")
 async def start_profile_creation(call: CallbackQuery, state: FSMContext) -> None:
@@ -65,34 +70,39 @@ async def process_city(message: Message, state: FSMContext):
         if isinstance(message, Message):
             await message.answer('Кажется вы ввели число. Напишите ваши интересы')
 
-
 @router.message(F.text, ProfileForm.interests)
 async def process_interests(message: Message, state: FSMContext) -> None:
     if message.text and not message.text.isdigit():
         await state.update_data(interests=message.text)
-        if isinstance(message, Message):
-            await message.answer("Отправь своё фото:")
+        await message.answer("Отправь своё фото:")
         await state.set_state(ProfileForm.photo)
     else:
-        if isinstance(message, Message):
-            await message.answer('Кажется вы ввели текст. Отправьте ваше фото')
+        await message.answer('Кажется вы ввели текст. Отправьте ваше фото')
 
-
-@router.message(F.text, ProfileForm.photo)
+@router.message(F.photo, ProfileForm.photo)
 async def process_photo(message: Message, state: FSMContext) -> None:
-    if not message.photo:
-        await message.answer("Пожалуйста, отправь именно фото 📷")
-        return
+    if message.photo:
+        file_info = await message.photo[-1].get_file()
+        file_path = f"user_{message.from_user.id}/profile_photo.jpg"
+        minio_client.put_object(
+            settings.MINIO_BUCKET, 
+            file_path, 
+            file_info.file, 
+            file_info.file_size
+        )
 
-    photo_id = message.photo[-1].file_id
-    if message.text and not message.text.isdigit():
-        await state.update_data(photo=photo_id)
-        if isinstance(message, Message):
-            await message.answer("Кого ты ищешь? (м/ж/все):")
+        file_url = f"{settings.minio_url}/{file_path}"
+        db: Session = next(get_db())
+        user = db.query(User).filter(User.id == message.from_user.id).first()
+
+        if user:
+            user.photo = file_url
+            db.commit()
+        await message.answer(f"Фото успешно загружено!")
         await state.set_state(ProfileForm.preferred_gender)
     else:
-        if isinstance(message, Message):
-            await message.answer('Кажется вы ввели число. Напишите пол парнтера, которого вы ищите')
+        await message.answer("Пожалуйста, отправь именно фото")
+
 
 @router.message(F.text, ProfileForm.preferred_gender)
 async def process_preferred_gender(message: Message, state: FSMContext) -> None:

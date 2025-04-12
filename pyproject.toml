@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "dating bot"
+name = "dating-bot"
 version = "0.1.0"
 description = ""
 authors = ["Artem09076 <grigoranartem592@yandex.ru>"]

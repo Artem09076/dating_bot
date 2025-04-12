@@ -19,6 +19,11 @@ class Settings(BaseSettings):
     REDIS_HOST: str
     REDIS_PORT: int
 
+    MINIO_ENDPOINT: str
+    MINIO_ACCESS_KEY: str
+    MINIO_SECRET_KEY: str
+    MINIO_BUCKET: str = 'photos'
+
     USER_QUEUE: str = 'user_receipts.{user_id}'
 
     @property
@@ -28,6 +33,10 @@ class Settings(BaseSettings):
     @property
     def rabbit_url(self) -> str:
         return f'amqp://{self.RABBIT_USER}:{self.RABBIT_PASSWORD}@{self.RABBIT_HOST}:{self.RABBIT_PORT}/'
+    
+    @property
+    def minio_url(self) -> str:
+        return f'http://{self.MINIO_ENDPOINT}/{self.MINIO_BUCKET}'
 
     model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8')
 
