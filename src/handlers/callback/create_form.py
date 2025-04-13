@@ -77,10 +77,14 @@ async def process_city(message: Message, state: FSMContext):
 
 @router.message(F.text, ProfileForm.interests)
 async def process_interests(message: Message, state: FSMContext) -> None:
-    if message.text and not message.text.isdigit():
-        await state.update_data(interests=message.text)
-        await message.answer("Отправь своё фото:")
-        await state.set_state(ProfileForm.photo)
+    interest = message.text
+    if interest and ',' in interest:
+        interests_list = [i.strip() for i in interest.split(",") if i.strip()]
+        if len(interests_list) >= 2:
+            await state.update_data(interests=', '.join(interests_list))
+            await message.answer("Отправь своё фото:")
+            await state.set_state(ProfileForm.photo)
+            return
     else:
         await message.answer("Кажется вы ввели текст. Отправьте ваше фото")
 
@@ -142,7 +146,13 @@ async def process_preferred_gender(message: Message, state: FSMContext) -> None:
 @router.message(F.text, ProfileForm.preferred_age_min)
 async def process_preferred_age_min(message: Message, state: FSMContext) -> None:
     if message.text and message.text.isdigit():
-        await state.update_data(preferred_age_min=int(message.text))
+        preferred_age_min = int(message.text)
+
+        if preferred_age_min < 16:
+            await message.answer("Минимальный возраст должен быть не меньше 16 лет.")
+            return
+        
+        await state.update_data(preferred_age_min=preferred_age_min)
         if isinstance(message, Message):
             await message.answer("А теперь максимальный возраст:")
         await state.set_state(ProfileForm.preferred_age_max)
@@ -157,7 +167,16 @@ async def process_preferred_age_min(message: Message, state: FSMContext) -> None
 async def process_preferred_age_max(message: Message, state: FSMContext) -> None:
 
     if message.text and message.text.isdigit():
-        await state.update_data(preferred_age_max=int(message.text))
+        preferred_age_max = int(message.text)
+
+        user_data = await state.get_data()
+        preferred_age_min = user_data.get("preferred_age_min")
+
+        if preferred_age_min and preferred_age_max < preferred_age_min:
+            await message.answer("Максимальный возраст должен быть больше или равен минимальному.")
+            return
+
+        await state.update_data(preferred_age_max=preferred_age_max)
         if isinstance(message, Message):
             await message.answer(
                 "Из какого города ты хочешь найти пару? (или напиши 'все'):"
