@@ -1,7 +1,7 @@
 import aio_pika
 import msgpack
 from aiogram import F
-from aiogram.types import Message, InlineKeyboardMarkup, CallbackQuery, InlineKeyboardButton
+from aiogram.types import Message, InlineKeyboardMarkup, CallbackQuery, InlineKeyboardButton, KeyboardButton, ReplyKeyboardMarkup
 from aiogram.fsm.context import FSMContext
 from src.storage.rabbit import channel_pool
 from aio_pika import ExchangeType
@@ -10,22 +10,7 @@ from src.handlers.state.made_form import ProfileForm
 from src.handlers.command.gender import gender_keyboard
 from src.storage.minio import minio_client
 from config.settings import settings
-from src.model.model import User
-from src.storage.db import get_db
-from sqlalchemy.orm import Session
-import re
 
-def safe_bucket_name(user_id: int, file_id: str) -> str:
-    name = f"photo-{user_id}-{file_id}".lower()
-    name = re.sub(r"[^a-z0-9.-]", "-", name)
-    name = re.sub(r"\.\.+", ".", name)
-    name = re.sub(r"-\.+|\.-+", "-", name)
-    name = name[:63]
-    name = name.strip(".-")
-    if len(name) < 3:
-        name = f"ph-{user_id}"
-
-    return name
 
 @router.callback_query(F.data == "make_form")
 async def start_profile_creation(call: CallbackQuery, state: FSMContext) -> None:
@@ -113,8 +98,18 @@ async def process_photo(message: Message, state: FSMContext) -> None:
         )
 
         file_url = f"{settings.minio_url}/{file_name}"
+        preferred_gender_keyboard = ReplyKeyboardMarkup(keyboard=[
+                [
+                    KeyboardButton(text="Мужской"),
+                    KeyboardButton(text="Женский")
+                ],
+                [
+                    KeyboardButton(text="Все равно")
+                ]
+            ]
+        )
         await state.update_data(photos=file_url)
-        await message.answer(f"Фото успешно загружено!")
+        await message.answer(f"Фото успешно загружено! Кто тебе интересен?", reply_markup=preferred_gender_keyboard)
         await state.set_state(ProfileForm.preferred_gender)
     else:
         await message.answer("Пожалуйста, отправь именно фото")
@@ -122,6 +117,7 @@ async def process_photo(message: Message, state: FSMContext) -> None:
 
 @router.message(F.text, ProfileForm.preferred_gender)
 async def process_preferred_gender(message: Message, state: FSMContext) -> None:
+    message.edit_reply_markup(reply_markup=None)
     if message.text and not message.text.isdigit():
         await state.update_data(preferred_gender=message.text)
         if isinstance(message, Message):
@@ -134,7 +130,7 @@ async def process_preferred_gender(message: Message, state: FSMContext) -> None:
 
 @router.message(F.text, ProfileForm.preferred_age_min)
 async def process_preferred_age_min(message: Message, state: FSMContext) -> None:
-    if message.text and not message.text.isdigit():
+    if message.text and message.text.isdigit():
         await state.update_data(preferred_age_min=message.text)
         if isinstance(message, Message):
             await message.answer("А теперь максимальный возраст:")
@@ -169,10 +165,9 @@ async def process_preferred_city(message: Message, state: FSMContext) -> None:
         f"⚧ Пол: {user_data.get('gender')}\n"
         f"📍 Город: {user_data.get('city')}\n"
         f"🎯 Интересы: {user_data.get('interests')}\n\n"
-        f"Фото: {user_data.get('photos')}"
         f"🔍 Ищет: {user_data.get('preferred_gender')} "
         f"({user_data.get('preferred_age_min')}-{user_data.get('preferred_age_max')} лет, "
-        f"город: {user_data.get('preferred_city')})",
+        f"город: {user_data.get('preferred_city')})"
     )
 
     menu_list = [
@@ -180,7 +175,7 @@ async def process_preferred_city(message: Message, state: FSMContext) -> None:
         [InlineKeyboardButton(text='❌Заполнить сначала', callback_data='incorrect')],
     ]
 
-    keyboard = InlineKeyboardMarkup(keyboard=menu_list)
+    keyboard = InlineKeyboardMarkup(inline_keyboard=menu_list)
     if isinstance(message, Message):
         await message.answer(caption, reply_markup=keyboard)
     await state.set_state(ProfileForm.profile_filled)

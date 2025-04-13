@@ -8,9 +8,6 @@ from src.storage.db import async_session
 
 async def create_form(body: Dict[str, Any]) -> None:
     async with async_session() as db:
-        result = await db.execute(select(User).where(User.id == body.get('id')))
-        user = result.scalar_one()
-
         user = User(
             user_id=body.get('id'),
             name=body.get('name'),
