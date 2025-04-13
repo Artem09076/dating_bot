@@ -204,6 +204,7 @@ async def create_form_correct(call: CallbackQuery, state: FSMContext) -> None:
             'preferred_age_min': user_data.get('preferred_age_min'),
             'preferred_age_max': user_data.get('preferred_age_max'),
             'preferred_city': user_data.get('preferred_city'),
+            'action': 'make_form',
         }
 
         await exchange.publish(aio_pika.Message(msgpack.packb(body)), 'user_messages')
