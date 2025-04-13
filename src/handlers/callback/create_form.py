@@ -13,6 +13,7 @@ from src.handlers.command.gender import gender_keyboard
 from src.handlers.state.made_form import ProfileForm
 from src.storage.minio import minio_client
 from src.storage.rabbit import channel_pool
+import re
 
 
 @router.callback_query(F.data == "make_form")
@@ -78,16 +79,14 @@ async def process_city(message: Message, state: FSMContext):
 @router.message(F.text, ProfileForm.interests)
 async def process_interests(message: Message, state: FSMContext) -> None:
     interest = message.text
-    if interest and ',' in interest:
+    pattern = r"^\s*[\w\s\-]+(?:\s*,\s*[\w\s\-]+)+\s*$"
+    if interest and re.match(pattern, interest):
         interests_list = [i.strip() for i in interest.split(",") if i.strip()]
-        if len(interests_list) >= 2:
-            await state.update_data(interests=', '.join(interests_list))
-            await message.answer("Отправь своё фото:")
-            await state.set_state(ProfileForm.photo)
-            return
+        await state.update_data(interests=interests_list)
+        await message.answer("Отправь своё фото:")
+        await state.set_state(ProfileForm.photo)
     else:
         await message.answer("Кажется вы ввели текст. Отправьте ваше фото")
-
 
 @router.message(F.photo, ProfileForm.photo)
 async def process_photo(message: Message, state: FSMContext) -> None:
@@ -228,7 +227,7 @@ async def create_form_correct(call: CallbackQuery, state: FSMContext) -> None:
         await user_queue.bind(exchange, "user_messages")
 
         user_data = await state.get_data()
-        interests = user_data.get("interests", "").split(", ")
+        interests = user_data.get("interests", [])
 
         body = {
             "id": call.from_user.id,
