@@ -1,7 +1,10 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, Enum, DateTime, Boolean
-from sqlalchemy.orm import relationship, Mapped, mapped_column
-from datetime import datetime
 import enum
+from datetime import datetime
+
+from sqlalchemy import (Boolean, Column, DateTime, Enum, Float, ForeignKey,
+                        Integer, String)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from src.model.meta import Base
 
 
@@ -9,6 +12,7 @@ class GenderEnum(enum.Enum):
     male = "male"
     female = "female"
     other = "other"
+
 
 class User(Base):
     __tablename__ = "user"
@@ -26,12 +30,19 @@ class User(Base):
     preferred_gender: Mapped[GenderEnum] = mapped_column(Enum(GenderEnum))
     preferred_city: Mapped[str] = mapped_column(nullable=True)
 
-    invited_by_user_id: Mapped[int] = mapped_column(ForeignKey("public.user.id"), nullable=True)
+    invited_by_user_id: Mapped[int] = mapped_column(
+        ForeignKey("public.user.id"), nullable=True
+    )
     invited_users = relationship("User", backref="invited_by", remote_side=[id])
 
     primary_rating = relationship("PrimaryRating", back_populates="user", uselist=False)
-    behavior_rating = relationship("BehaviorRating", back_populates="user", uselist=False)
-    combined_rating = relationship("CombinedRating", back_populates="user", uselist=False)
+    behavior_rating = relationship(
+        "BehaviorRating", back_populates="user", uselist=False
+    )
+    combined_rating = relationship(
+        "CombinedRating", back_populates="user", uselist=False
+    )
+
 
 class PrimaryRating(Base):
     __tablename__ = "primary_ratings"
@@ -43,6 +54,7 @@ class PrimaryRating(Base):
     preference_match_score: Mapped[float] = mapped_column(default=0.0)
 
     user = relationship("User", back_populates="primary_rating")
+
 
 class BehaviorRating(Base):
     __tablename__ = "behavior_ratings"
@@ -57,6 +69,7 @@ class BehaviorRating(Base):
 
     user = relationship("User", back_populates="behavior_rating")
 
+
 class CombinedRating(Base):
     __tablename__ = "combined_ratings"
 
@@ -65,6 +78,7 @@ class CombinedRating(Base):
     score: Mapped[float] = mapped_column(default=0.0)
 
     user = relationship("User", back_populates="combined_rating")
+
 
 class Like(Base):
     __tablename__ = "likes"
@@ -76,6 +90,7 @@ class Like(Base):
 
     from_user = relationship("User", foreign_keys=[from_user_id])
     to_user = relationship("User", foreign_keys=[to_user_id])
+
 
 class Conversation(Base):
     __tablename__ = "conversation"

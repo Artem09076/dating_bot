@@ -22,23 +22,23 @@ class Settings(BaseSettings):
     MINIO_ENDPOINT: str
     MINIO_ACCESS_KEY: str
     MINIO_SECRET_KEY: str
-    MINIO_BUCKET: str = 'photos-{user_id}'
+    MINIO_BUCKET: str = "photos-{user_id}"
 
-    USER_QUEUE: str = 'user_receipts.{user_id}'
+    USER_QUEUE: str = "user_receipts.{user_id}"
 
     @property
     def db_url(self) -> str:
-        return f'postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}'
+        return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
     @property
     def rabbit_url(self) -> str:
-        return f'amqp://{self.RABBIT_USER}:{self.RABBIT_PASSWORD}@{self.RABBIT_HOST}:{self.RABBIT_PORT}/'
-    
+        return f"amqp://{self.RABBIT_USER}:{self.RABBIT_PASSWORD}@{self.RABBIT_HOST}:{self.RABBIT_PORT}/"
+
     @property
     def minio_url(self) -> str:
-        return f'http://{self.MINIO_ENDPOINT}/{self.MINIO_BUCKET}'
+        return f"http://{self.MINIO_ENDPOINT}/{self.MINIO_BUCKET}"
 
-    model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8')
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 
 settings = Settings()

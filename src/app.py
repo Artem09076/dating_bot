@@ -1,11 +1,14 @@
 import asyncio
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
 from typing import AsyncIterator
-from src.bot import bot, dp
+
+import uvicorn
+from fastapi import FastAPI
+
 from config.settings import settings
 from src.api.router import router
-import uvicorn
+from src.bot import bot, dp
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -20,17 +23,21 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     if polling_task is not None:
         polling_task.cancel()
-        try: 
+        try:
             await polling_task
         except asyncio.CancelledError:
-            print('Stop polling')
-    
+            print("Stop polling")
+
     await bot.delete_webhook()
 
+
 def create_app() -> FastAPI:
-    app = FastAPI(docs_url='/swagger', lifespan=lifespan)
+    app = FastAPI(docs_url="/swagger", lifespan=lifespan)
     app.include_router(router)
     return app
 
-if __name__ == '__main__':
-    uvicorn.run('src.app:create_app', factory=True, host='0.0.0.0', port=8001, workers=1)
+
+if __name__ == "__main__":
+    uvicorn.run(
+        "src.app:create_app", factory=True, host="0.0.0.0", port=8001, workers=1
+    )
