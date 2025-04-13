@@ -13,6 +13,7 @@ from src.handlers.command.gender import gender_keyboard
 from src.handlers.state.made_form import ProfileForm
 from src.storage.minio import minio_client
 from src.storage.rabbit import channel_pool
+import re
 
 
 @router.callback_query(F.data == "make_form")
@@ -77,13 +78,15 @@ async def process_city(message: Message, state: FSMContext):
 
 @router.message(F.text, ProfileForm.interests)
 async def process_interests(message: Message, state: FSMContext) -> None:
-    if message.text and not message.text.isdigit():
-        await state.update_data(interests=message.text)
+    interest = message.text
+    pattern = r"^\s*[\w\s\-]+(?:\s*,\s*[\w\s\-]+)+\s*$"
+    if interest and re.match(pattern, interest):
+        interests_list = [i.strip() for i in interest.split(",") if i.strip()]
+        await state.update_data(interests=interests_list)
         await message.answer("Отправь своё фото:")
         await state.set_state(ProfileForm.photo)
     else:
         await message.answer("Кажется вы ввели текст. Отправьте ваше фото")
-
 
 @router.message(F.photo, ProfileForm.photo)
 async def process_photo(message: Message, state: FSMContext) -> None:
@@ -142,7 +145,13 @@ async def process_preferred_gender(message: Message, state: FSMContext) -> None:
 @router.message(F.text, ProfileForm.preferred_age_min)
 async def process_preferred_age_min(message: Message, state: FSMContext) -> None:
     if message.text and message.text.isdigit():
-        await state.update_data(preferred_age_min=int(message.text))
+        preferred_age_min = int(message.text)
+
+        if preferred_age_min < 16:
+            await message.answer("Минимальный возраст должен быть не меньше 16 лет.")
+            return
+        
+        await state.update_data(preferred_age_min=preferred_age_min)
         if isinstance(message, Message):
             await message.answer("А теперь максимальный возраст:")
         await state.set_state(ProfileForm.preferred_age_max)
@@ -157,7 +166,16 @@ async def process_preferred_age_min(message: Message, state: FSMContext) -> None
 async def process_preferred_age_max(message: Message, state: FSMContext) -> None:
 
     if message.text and message.text.isdigit():
-        await state.update_data(preferred_age_max=int(message.text))
+        preferred_age_max = int(message.text)
+
+        user_data = await state.get_data()
+        preferred_age_min = user_data.get("preferred_age_min")
+
+        if preferred_age_min and preferred_age_max < preferred_age_min:
+            await message.answer("Максимальный возраст должен быть больше или равен минимальному.")
+            return
+
+        await state.update_data(preferred_age_max=preferred_age_max)
         if isinstance(message, Message):
             await message.answer(
                 "Из какого города ты хочешь найти пару? (или напиши 'все'):"
@@ -209,7 +227,7 @@ async def create_form_correct(call: CallbackQuery, state: FSMContext) -> None:
         await user_queue.bind(exchange, "user_messages")
 
         user_data = await state.get_data()
-        interests = user_data.get("interests", "").split(", ")
+        interests = user_data.get("interests", [])
 
         body = {
             "id": call.from_user.id,
