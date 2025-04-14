@@ -13,3 +13,6 @@ class ProfileForm(StatesGroup):
     preferred_city = State()
     profile_filled = State()
     check_state = State()
+
+    browsing_profiles = State()
+    waiting_reaction = State()
