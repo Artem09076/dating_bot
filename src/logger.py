@@ -1,11 +1,15 @@
-import logging
 import logging.config
 from contextvars import ContextVar
 from uuid import uuid4
 
+import yaml
 from colorama import Fore, Style
 
 correlation_id_context: ContextVar[str] = ContextVar("correlation_id", default="N/A")
+
+
+with open("config/logging.conf.yml", "r") as f:
+    LOGGING_CONFIG = yaml.full_load(f)
 
 
 class ConsoleFormatter(logging.Formatter):

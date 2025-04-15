@@ -43,6 +43,24 @@ class User(Base):
         "CombinedRating", back_populates="user", uselist=False
     )
 
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "age": self.age,
+            "gender": self.gender.value if self.gender else None,
+            "city": self.city,
+            "interests": self.interests,
+            "profile_filled": self.profile_filled,
+            "photo": self.photo,
+            "preferred_age_min": self.preferred_age_min,
+            "preferred_age_max": self.preferred_age_max,
+            "preferred_gender": (
+                self.preferred_gender.value if self.preferred_gender else None
+            ),
+            "preferred_city": self.preferred_city,
+        }
+
 
 class PrimaryRating(Base):
     __tablename__ = "primary_ratings"

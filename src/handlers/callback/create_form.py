@@ -1,3 +1,5 @@
+import re
+
 import aio_pika
 import msgpack
 from aio_pika import ExchangeType
@@ -13,7 +15,6 @@ from src.handlers.command.gender import gender_keyboard
 from src.handlers.state.made_form import ProfileForm
 from src.storage.minio import minio_client
 from src.storage.rabbit import channel_pool
-import re
 
 
 @router.callback_query(F.data == "make_form")
@@ -86,7 +87,8 @@ async def process_interests(message: Message, state: FSMContext) -> None:
         await message.answer("Отправь своё фото:")
         await state.set_state(ProfileForm.photo)
     else:
-        await message.answer("Кажется вы ввели текст. Отправьте ваше фото")
+        await message.answer("Кажется вы ввели текст.")
+
 
 @router.message(F.photo, ProfileForm.photo)
 async def process_photo(message: Message, state: FSMContext) -> None:
@@ -108,14 +110,13 @@ async def process_photo(message: Message, state: FSMContext) -> None:
             content_type="image/jpeg",
         )
 
-        file_url = f"{bucket_name}/{file_name}"
         preferred_gender_keyboard = ReplyKeyboardMarkup(
             keyboard=[
                 [KeyboardButton(text="Мужской"), KeyboardButton(text="Женский")],
                 [KeyboardButton(text="Все равно")],
             ]
         )
-        await state.update_data(photo=file_url)
+        await state.update_data(photo=file_name)
         await message.answer(
             f"Фото успешно загружено! Кто тебе интересен?",
             reply_markup=preferred_gender_keyboard,
@@ -150,7 +151,7 @@ async def process_preferred_age_min(message: Message, state: FSMContext) -> None
         if preferred_age_min < 16:
             await message.answer("Минимальный возраст должен быть не меньше 16 лет.")
             return
-        
+
         await state.update_data(preferred_age_min=preferred_age_min)
         if isinstance(message, Message):
             await message.answer("А теперь максимальный возраст:")
@@ -172,7 +173,9 @@ async def process_preferred_age_max(message: Message, state: FSMContext) -> None
         preferred_age_min = user_data.get("preferred_age_min")
 
         if preferred_age_min and preferred_age_max < preferred_age_min:
-            await message.answer("Максимальный возраст должен быть больше или равен минимальному.")
+            await message.answer(
+                "Максимальный возраст должен быть больше или равен минимальному."
+            )
             return
 
         await state.update_data(preferred_age_max=preferred_age_max)

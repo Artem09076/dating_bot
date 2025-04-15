@@ -1,1 +1,1 @@
-from . import menu, start
+from . import get_profile, menu, start

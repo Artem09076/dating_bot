@@ -22,4 +22,5 @@ async def main() -> None:
             async for message in queue_iter:
                 async with message.process():
                     body = msgpack.unpackb(message.body)
+                    logger.info(body)
                     await handle_event_distribution(body)
