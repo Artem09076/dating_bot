@@ -22,7 +22,6 @@ async def find_candidates(body):
         if not user:
             return
         
-        logging.config.dictConfig(LOGGING_CONFIG)
         logger.info("ПРИНЯЛИ ЮЗЕРА ИЗ БД, ЩАС ФИЛЬТРЫ")
 
         filters = and_(
@@ -41,7 +40,6 @@ async def find_candidates(body):
 
         candidates_data = [c.to_dict() for c in candidates]
 
-        logging.config.dictConfig(LOGGING_CONFIG)
         logger.info("КАНДИДАТЫ СФОРМИРОВАНЫ")
 
 
@@ -66,7 +64,6 @@ async def find_candidates(body):
             "candidates": candidates_data
         }
 
-        logging.config.dictConfig(LOGGING_CONFIG)
         logger.info("ОТПРАВКА КАНДИДАТОВ В ОЧЕРЕДЬ")
 
         await exchange.publish(
@@ -77,7 +74,6 @@ async def find_candidates(body):
 
 # async def like_user(body):
 #     user_id = body.get("user_id")
-#     logging.config.dictConfig(LOGGING_CONFIG)
 #     logger.info("ПРИЁМ ЗАПРОСА В БАЗУ ДАННЫХ LIKE USER", body)
 #     async with async_session() as db:
 #         like = Like(

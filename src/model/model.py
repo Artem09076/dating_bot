@@ -70,7 +70,6 @@ class User(Base):
             "preferred_city": self.preferred_city,
         }
 
-
 class PrimaryRating(Base):
     __tablename__ = "primary_ratings"
 

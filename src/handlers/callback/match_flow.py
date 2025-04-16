@@ -1,4 +1,5 @@
 import asyncio
+from io import BytesIO
 import aio_pika
 import msgpack
 from aiogram import F
@@ -13,6 +14,13 @@ from consumer.logger import LOGGING_CONFIG, logger
 import logging.config
 from src.templates.env import render
 from src.storage.minio import minio_client
+from aiogram.types import InputFile
+from aiogram.types import (
+    BufferedInputFile,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    Message,
+)
 
 
 @router.callback_query(F.data == "find_pair")
@@ -36,7 +44,6 @@ async def find_pair_handler(call: CallbackQuery, state: FSMContext):
             "action": "find_pair"
         }
 
-        logging.config.dictConfig(LOGGING_CONFIG)
         logger.info("ЗАПРОС ПОШЕЛ В USER_MEASSAGES")
 
         await exchange.publish(
@@ -52,7 +59,6 @@ async def find_pair_handler(call: CallbackQuery, state: FSMContext):
                 await res.ack()
                 data = msgpack.unpackb(res.body)
                 candidates = data.get("candidates", [])
-                logging.config.dictConfig(LOGGING_CONFIG)
                 logger.info("ПРИНЯЛИ КАНДИДАТОВ")
                 if not candidates:
                     await call.message.answer("😕 Подходящих анкет не найдено.")
@@ -63,7 +69,6 @@ async def find_pair_handler(call: CallbackQuery, state: FSMContext):
                 return
 
             except asyncio.QueueEmpty:
-                logging.config.dictConfig(LOGGING_CONFIG)
                 logger.info("ОЧЕРЕДЬ ПУСТАЯ!!!!!!")
                 await asyncio.sleep(1)
 
@@ -71,7 +76,6 @@ async def find_pair_handler(call: CallbackQuery, state: FSMContext):
 
 
 async def show_next_candidate(call: CallbackQuery, state: FSMContext):
-    logging.config.dictConfig(LOGGING_CONFIG)
     logger.info("ПОКАЗ КАНДИДАТОВ")
     data = await state.get_data()
     index = data.get("current_index", 0)
@@ -85,11 +89,17 @@ async def show_next_candidate(call: CallbackQuery, state: FSMContext):
 
     candidate = candidates[index]
 
-    # TODO: ФОТКУ ИЗ МИНЬОНА ВЫСОСАТЬ
-
-    # bucket_name = settings.MINIO_BUCKET.format(user_id=candidate['id'])
-    # file_name = candidate["photo"].split("/", 1)[1]
-    # url = minio_client.presigned_get_object(bucket_name, file_name)
+    response = minio_client.get_object(
+        settings.MINIO_BUCKET.format(
+            user_id=candidate['id']), candidate["photo"]
+    )
+    photo_data = BytesIO(response.read())
+    response.close()
+    response.release_conn()
+    bufferd = BufferedInputFile(
+        photo_data.read(), filename=candidate["photo"]
+    )
+    
     candidate.pop("photo", None)
 
     caption = render("candidate_card.jinja2", **candidate)
@@ -100,18 +110,13 @@ async def show_next_candidate(call: CallbackQuery, state: FSMContext):
         [InlineKeyboardButton(text="❌ Закончить", callback_data="stop_search")]
     ])
 
-    logging.config.dictConfig(LOGGING_CONFIG)
     logger.info("АНКЕТА СФОРМИРОВАНА И ОТПРАВЛЯЕТСЯ")
 
-    await call.message.answer(render("candidate_card.jinja2", **candidate), reply_markup=keyboard)
-
-
-    # await call.message.answer_photo(url, caption=caption, reply_markup=keyboard)
+    await call.message.answer_photo(photo=bufferd, caption=caption, reply_markup=keyboard)
 
 
 @router.callback_query(F.data.in_(["like", "dislike"]))
 async def handle_reaction(callback: CallbackQuery, state: FSMContext):
-    logging.config.dictConfig(LOGGING_CONFIG)
     logger.info("СТРЕМ ИЛИ НОРМ")
 
     data = await state.get_data()
@@ -124,7 +129,6 @@ async def handle_reaction(callback: CallbackQuery, state: FSMContext):
 
     if callback.data == "like":
         liked_user_id = candidates[index]["id"]
-        logging.config.dictConfig(LOGGING_CONFIG)
         logger.info("ПОСТАВИЛИ ЛАЙК")
         # user_id = callback.from_user.id
 
@@ -145,7 +149,6 @@ async def handle_reaction(callback: CallbackQuery, state: FSMContext):
         #         "to_user_id": liked_user_id
         #     }
 
-        #     logging.config.dictConfig(LOGGING_CONFIG)
         #     logger.info("ПЕРЕД ПАБЛИШ123 В USER_MEASSAGES")
 
         #     await exchange.publish(
@@ -156,14 +159,12 @@ async def handle_reaction(callback: CallbackQuery, state: FSMContext):
         await notify_liked_user(liked_user_id, callback.from_user.id)
 
     await state.update_data(current_index=index + 1)
-    logging.config.dictConfig(LOGGING_CONFIG)
     logger.info("СЛЕДУЮЩИЙ!!!!!!!")
     await show_next_candidate(callback, state)
 
 
 @router.callback_query(F.data == "stop_search")
 async def stop_search(callback: CallbackQuery, state: FSMContext):
-    logging.config.dictConfig(LOGGING_CONFIG)
     logger.info("ВСЁ, ХОРОШ. НА ГЛАВНУЮ")
     await callback.message.answer("📋 Возвращаю на главное меню...")
     await menu(callback.message)
@@ -172,5 +173,5 @@ async def stop_search(callback: CallbackQuery, state: FSMContext):
     
 
 async def notify_liked_user(target_user_id, who_liked_id):
-    logging.config.dictConfig(LOGGING_CONFIG)
     logger.info("МЫ В УВЕДОМЛЕНИИ О ЛАЙКЕ")
+    # await callback.message.answer("<3 Вы поставили лайк этой анкете")
