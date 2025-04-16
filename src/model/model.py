@@ -43,6 +43,17 @@ class User(Base):
         "CombinedRating", back_populates="user", uselist=False
     )
 
+    def to_dict(self):
+        return {
+            'id': str(self.id),
+            'name': self.name,
+            'age': str(self.age),
+            'gender': str(self.gender.value),
+            'city': self.city,
+            'interests': self.interests,
+            'photo': self.photo
+        }
+
 
 class PrimaryRating(Base):
     __tablename__ = "primary_ratings"

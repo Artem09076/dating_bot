@@ -1,0 +1,6 @@
+👤 {{ name }}, {{ age }} лет
+⚧ Пол: {{ gender }}
+🏙 Город: {{ city if city else "не указан" }}
+{% if interests and interests.strip() %}
+🎯 Интересы: {{ interests }}
+{% endif %}

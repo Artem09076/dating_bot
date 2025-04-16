@@ -8,5 +8,7 @@ async def handle_event_distribution(body: Dict[str, Any]) -> None:
     match body["action"]:
         case "make_form":
             await create_form(body)
-        case 'find_candidates':
+        case 'find_pair':
             await find_candidates(body)
+        # case 'like_user':
+        #     await like_user(body)
