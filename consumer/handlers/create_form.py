@@ -4,8 +4,8 @@ from typing import Any, Dict
 from sqlalchemy.exc import SQLAlchemyError
 
 from consumer.logger import LOGGING_CONFIG, logger
+from consumer.storage.db import async_session
 from src.model.model import GenderEnum, User
-from src.storage.db import async_session
 
 
 async def create_form(body: Dict[str, Any]) -> None:

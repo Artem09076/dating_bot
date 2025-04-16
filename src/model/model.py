@@ -1,8 +1,16 @@
 import enum
 from datetime import datetime
 
-from sqlalchemy import (Boolean, Column, DateTime, Enum, Float, ForeignKey,
-                        Integer, String)
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.model.meta import Base
@@ -43,15 +51,23 @@ class User(Base):
         "CombinedRating", back_populates="user", uselist=False
     )
 
-    def to_dict(self):
+
+    def to_dict(self) -> dict:
         return {
-            'id': str(self.id),
-            'name': self.name,
-            'age': str(self.age),
-            'gender': str(self.gender.value),
-            'city': self.city,
-            'interests': self.interests,
-            'photo': self.photo
+            "id": str(self.id),
+            "name": self.name,
+            "age": str(self.age),
+            "gender": str(self.gender.value) if self.gender else None,
+            "city": self.city,
+            "interests": self.interests,
+            "profile_filled": self.profile_filled,
+            "photo": self.photo,
+            "preferred_age_min": self.preferred_age_min,
+            "preferred_age_max": self.preferred_age_max,
+            "preferred_gender": (
+                self.preferred_gender.value if self.preferred_gender else None
+            ),
+            "preferred_city": self.preferred_city,
         }
 
 
