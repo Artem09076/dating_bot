@@ -7,8 +7,12 @@ import msgpack
 from aio_pika import ExchangeType
 from aio_pika.exceptions import QueueEmpty
 from aiogram.filters import Command
-from aiogram.types import (BufferedInputFile, InlineKeyboardButton,
-                           InlineKeyboardMarkup, Message)
+from aiogram.types import (
+    BufferedInputFile,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    Message,
+)
 
 from config.settings import settings
 from src.handlers.command.router import router
@@ -16,9 +20,11 @@ from src.logger import LOGGING_CONFIG, logger
 from src.storage.minio import minio_client
 from src.storage.rabbit import channel_pool
 from src.templates.env import render
-
+from src.metrics import SEND_MESSAGE
+from src.metrics import track_latency
 
 @router.message(Command("my_profile"))
+@track_latency('get_profile')
 async def get_profile(message: Message) -> None:
     logging.config.dictConfig(LOGGING_CONFIG)
     user_id = message.from_user.id
@@ -36,6 +42,7 @@ async def get_profile(message: Message) -> None:
         await queue.bind(exchange, settings.USER_QUEUE.format(user_id=user_id))
         body = {"id": user_id, "action": "get_profile"}
         await exchange.publish(aio_pika.Message(msgpack.packb(body)), "user_messages")
+        SEND_MESSAGE.inc()
 
         for _ in range(3):
             try:

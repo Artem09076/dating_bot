@@ -5,6 +5,7 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 
 from consumer.app import main
+from consumer.api.router import router
 
 
 @asynccontextmanager
@@ -18,4 +19,5 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 def create_app() -> FastAPI:
     app = FastAPI(docs_url="/swagger", lifespan=lifespan)
+    app.include_router(router)
     return app

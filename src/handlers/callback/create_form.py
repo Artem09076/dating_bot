@@ -5,9 +5,14 @@ import msgpack
 from aio_pika import ExchangeType
 from aiogram import F
 from aiogram.fsm.context import FSMContext
-from aiogram.types import (CallbackQuery, InlineKeyboardButton,
-                           InlineKeyboardMarkup, KeyboardButton, Message,
-                           ReplyKeyboardMarkup)
+from aiogram.types import (
+    CallbackQuery,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    KeyboardButton,
+    Message,
+    ReplyKeyboardMarkup,
+)
 
 from config.settings import settings
 from src.handlers.callback.router import router
@@ -15,6 +20,7 @@ from src.handlers.command.gender import gender_keyboard
 from src.handlers.state.made_form import ProfileForm
 from src.storage.minio import minio_client
 from src.storage.rabbit import channel_pool
+from src.metrics import NEW_PROFILES, SEND_MESSAGE
 
 
 @router.callback_query(F.data == "make_form")
@@ -248,6 +254,8 @@ async def create_form_correct(call: CallbackQuery, state: FSMContext) -> None:
         }
 
         await exchange.publish(aio_pika.Message(msgpack.packb(body)), "user_messages")
+        SEND_MESSAGE.inc()
+        NEW_PROFILES.inc()
 
     if isinstance(call.message, Message):
         await call.answer("Данные сохранены")

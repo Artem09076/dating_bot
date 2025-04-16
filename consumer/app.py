@@ -5,7 +5,7 @@ import msgpack
 from consumer.handlers.event_distribution import handle_event_distribution
 from consumer.logger import LOGGING_CONFIG, logger
 from consumer.storage import rabbit
-
+from consumer.metrics import RECEIVE_MESSAGE
 
 async def main() -> None:
     logging.config.dictConfig(LOGGING_CONFIG)
@@ -21,6 +21,6 @@ async def main() -> None:
         async with queue.iterator() as queue_iter:
             async for message in queue_iter:
                 async with message.process():
+                    RECEIVE_MESSAGE.inc()
                     body = msgpack.unpackb(message.body)
-                    logger.info(body)
                     await handle_event_distribution(body)

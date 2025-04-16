@@ -2,8 +2,12 @@ from collections.abc import AsyncGenerator
 
 from asyncpg import Connection
 from sqlalchemy import AsyncAdaptedQueuePool
-from sqlalchemy.ext.asyncio import (AsyncEngine, AsyncSession,
-                                    async_sessionmaker, create_async_engine)
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 from config.settings import settings
 
