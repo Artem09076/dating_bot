@@ -113,6 +113,9 @@ class Like(Base):
     from_user_id: Mapped[int] = mapped_column(ForeignKey("public.user.id"))
     to_user_id: Mapped[int] = mapped_column(ForeignKey("public.user.id"))
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    
+    is_mutual: Mapped[bool] = mapped_column(nullable=True)
+    
 
     from_user = relationship("User", foreign_keys=[from_user_id])
     to_user = relationship("User", foreign_keys=[to_user_id])

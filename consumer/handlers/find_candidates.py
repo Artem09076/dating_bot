@@ -70,16 +70,3 @@ async def find_candidates(body):
             Message(msgpack.packb(response_body)),
             routing_key=settings.USER_QUEUE.format(user_id=user_id)
         )
-
-
-# async def like_user(body):
-#     user_id = body.get("user_id")
-#     logger.info("ПРИЁМ ЗАПРОСА В БАЗУ ДАННЫХ LIKE USER", body)
-#     async with async_session() as db:
-#         like = Like(
-#             from_user_id=user_id,
-#             to_user_id=liked_user_id,
-#             created_at=datetime.utcnow()
-#         )
-#         session.add(like)
-#         await session.commit()
