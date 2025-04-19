@@ -36,7 +36,7 @@ async def start_editing(call: CallbackQuery, state: FSMContext):
         "Что вы хотите изменить?",
         reply_markup=edit_menu_keyboard
     )
-    await state.set_state(EditProfileForm.choosing_field)
+    await state.set_state(EditProfileForm.choose_field)
 
 
 @router.callback_query(EditProfileForm.choose_field)

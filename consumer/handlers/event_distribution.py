@@ -25,6 +25,6 @@ async def handle_event_distribution(body: Dict[str, Any]) -> None:
             await process_check_likes(body)
         case "delete_profile":
             await delete_profile(body)
-        case 'change_form':
+        case 'update_form':
             await change_form(body)
 
