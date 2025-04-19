@@ -14,9 +14,6 @@ async def menu(message: Message):
         ],
         [
             InlineKeyboardButton(text="Создать анкету", callback_data="make_form"),
-            InlineKeyboardButton(
-                text="Редактировать анкету", callback_data="change_form"
-            ),
         ],
         [
             InlineKeyboardButton(text="Рейтинг", callback_data="rating"),
