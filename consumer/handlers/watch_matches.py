@@ -7,8 +7,10 @@ import aio_pika
 import msgpack
 from config.settings import settings
 from consumer.storage import rabbit
+
 async def get_my_matches(body: dict):
     user_id = body["id"]
+    response_matches = []
 
     async with async_session() as db:
         try:
@@ -24,17 +26,12 @@ async def get_my_matches(body: dict):
 
             query = (
                 select(User.id, User.name, User.age, User.description)
-                .where(
-                    and_(
-                        User.id.in_(subquery),
-                    )
-                )
+                .where(User.id.in_(subquery))
             )
 
             result = await db.execute(query)
             matches = result.mappings().all()
 
-            response_matches = []
             for match in matches:
                 conv_query = select(Conversation).where(
                     ((Conversation.user1_id == user_id) & (Conversation.user2_id == match.id)) |
@@ -55,19 +52,18 @@ async def get_my_matches(body: dict):
                     "description": match.description,
                     "conversation_id": conversation.id
                 })
-            return {
-                "matches": response_matches
-            }
         
         except SQLAlchemyError as e:
-            return {"matches": []}
-        
+            response_matches = []
+
     async with rabbit.channel_pool.acquire() as channel:
         exchange = await channel.declare_exchange(
             "user_form", ExchangeType.TOPIC, durable=True
         )
 
         await exchange.publish(
-            aio_pika.Message(msgpack.packb(response_matches)),
+            aio_pika.Message(
+                body=msgpack.packb({"matches": response_matches}),
+            ),
             routing_key=settings.USER_QUEUE.format(user_id=user_id),
         )
