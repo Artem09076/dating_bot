@@ -51,12 +51,13 @@ class User(Base):
         "CombinedRating", back_populates="user", uselist=False
     )
 
+
     def to_dict(self) -> dict:
         return {
-            "id": self.id,
+            "id": str(self.id),
             "name": self.name,
-            "age": self.age,
-            "gender": self.gender.value if self.gender else None,
+            "age": str(self.age),
+            "gender": str(self.gender.value) if self.gender else None,
             "city": self.city,
             "interests": self.interests,
             "profile_filled": self.profile_filled,
@@ -68,7 +69,6 @@ class User(Base):
             ),
             "preferred_city": self.preferred_city,
         }
-
 
 class PrimaryRating(Base):
     __tablename__ = "primary_ratings"
@@ -113,6 +113,9 @@ class Like(Base):
     from_user_id: Mapped[int] = mapped_column(ForeignKey("public.user.id"))
     to_user_id: Mapped[int] = mapped_column(ForeignKey("public.user.id"))
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    
+    is_mutual: Mapped[bool] = mapped_column(nullable=True)
+    
 
     from_user = relationship("User", foreign_keys=[from_user_id])
     to_user = relationship("User", foreign_keys=[to_user_id])
