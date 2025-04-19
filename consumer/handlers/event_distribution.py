@@ -8,7 +8,7 @@ from consumer.handlers.get_profile import get_profile
 from consumer.handlers.like_user import process_like_user
 from consumer.handlers.delete_profile import delete_profile
 from consumer.handlers.change_form import change_form
-
+from consumer.handlers.watch_matches import get_my_matches
 
 
 async def handle_event_distribution(body: Dict[str, Any]) -> None:
@@ -27,4 +27,6 @@ async def handle_event_distribution(body: Dict[str, Any]) -> None:
             await delete_profile(body)
         case 'change_form':
             await change_form(body)
+        case 'get_my_matches':
+            await get_my_matches(body)
 
