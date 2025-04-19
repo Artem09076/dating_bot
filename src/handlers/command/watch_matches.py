@@ -2,21 +2,22 @@ import msgpack
 from aiogram import Router
 from aio_pika import ExchangeType
 from src.storage.rabbit import channel_pool
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from src.handlers.state.like_profile import LikedProfilesFlow
 from src.handlers.command.menu import menu
 from src.handlers.command.router import router
 from aiogram.fsm.context import FSMContext
+from config.settings import settings
 import aio_pika
 import msgpack
 from aio_pika import ExchangeType
 import asyncio
 from aiogram import F
 from src.handlers.state.show_next_user import show_next_liked_user
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, Message
 
 @router.callback_query(F.data == "my_matches")
-async def my_matches_handler(call: CallbackQuery, state: FSMContext):
+async def my_matches_handler(call: CallbackQuery, state: FSMContext, message: Message):
+    user_id = message.from_user.id
     async with channel_pool.acquire() as channel:
         exchange = await channel.declare_exchange(
                 "user_form", ExchangeType.TOPIC, durable=True
@@ -25,6 +26,9 @@ async def my_matches_handler(call: CallbackQuery, state: FSMContext):
         user_queue = await channel.declare_queue("user_messages", durable=True)
 
         await user_queue.bind(exchange, 'user_messages')
+        queue = await channel.declare_queue(
+            settings.USER_QUEUE.format(user_id=user_id), durable=True
+        )
 
         body = {
             "id": call.from_user.id,
@@ -38,7 +42,7 @@ async def my_matches_handler(call: CallbackQuery, state: FSMContext):
         retries = 3
         for _ in range(retries):
             try:
-                res = await user_queue.get(timeout=5)
+                res = await queue.get(timeout=5)
                 await res.ack()
                 data = msgpack.unpackb(res.body)
 

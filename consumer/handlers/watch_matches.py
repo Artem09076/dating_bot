@@ -1,10 +1,12 @@
 from sqlalchemy import select, and_
 from consumer.storage.db import async_session
 from src.model.model import Like, User, Conversation
-import logging.config
-from consumer.logger import LOGGING_CONFIG, logger
+from aio_pika import ExchangeType
 from sqlalchemy.exc import SQLAlchemyError
-
+import aio_pika
+import msgpack
+from config.settings import settings
+from consumer.storage import rabbit
 async def get_my_matches(body: dict):
     user_id = body["id"]
 
@@ -56,6 +58,16 @@ async def get_my_matches(body: dict):
             return {
                 "matches": response_matches
             }
-
+        
         except SQLAlchemyError as e:
             return {"matches": []}
+        
+    async with rabbit.channel_pool.acquire() as channel:
+        exchange = await channel.declare_exchange(
+            "user_form", ExchangeType.TOPIC, durable=True
+        )
+
+        await exchange.publish(
+            aio_pika.Message(msgpack.packb(response_matches)),
+            routing_key=settings.USER_QUEUE.format(user_id=user_id),
+        )
