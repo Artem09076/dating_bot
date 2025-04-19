@@ -54,8 +54,12 @@ async def get_profile(message: Message) -> None:
                 buttons = [
                     [
                         InlineKeyboardButton(
-                            text="Изменить профиль", callback_data="change_form"
+                            text="Изменить анкету", callback_data="change_form"
+                        ),
+                        InlineKeyboardButton(
+                            text='Удалить анкету', callback_data='delete_form'
                         )
+
                     ]
                 ]
                 keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)

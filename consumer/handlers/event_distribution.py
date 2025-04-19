@@ -4,7 +4,10 @@ from consumer.handlers.create_form import create_form
 from consumer.handlers.find_candidates import find_candidates
 from consumer.handlers.get_likes import process_check_likes
 from consumer.handlers.get_profile import get_profile
+
 from consumer.handlers.like_user import process_like_user
+from consumer.handlers.delete_profile import delete_profile
+
 
 
 async def handle_event_distribution(body: Dict[str, Any]) -> None:
@@ -19,3 +22,6 @@ async def handle_event_distribution(body: Dict[str, Any]) -> None:
             await get_profile(body)
         case 'check_likes':
             await process_check_likes(body)
+        case "delete_profile":
+            await delete_profile(body)
+
