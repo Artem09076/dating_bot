@@ -4,7 +4,7 @@ from aio_pika import ExchangeType
 from src.storage.rabbit import channel_pool
 from src.handlers.state.like_profile import LikedProfilesFlow
 from src.handlers.command.menu import menu
-from src.handlers.command.router import router
+from src.handlers.callback.router import router
 from aiogram.fsm.context import FSMContext
 from config.settings import settings
 import aio_pika
@@ -14,10 +14,14 @@ import asyncio
 from aiogram import F
 from src.handlers.state.show_next_user import show_next_liked_user
 from aiogram.types import CallbackQuery, Message
+from src.logger import logger, LOGGING_CONFIG
+import logging.config
 
 @router.callback_query(F.data == "my_matches")
-async def my_matches_handler(call: CallbackQuery, state: FSMContext, message: Message):
-    user_id = message.from_user.id
+async def my_matches_handler(call: CallbackQuery, state: FSMContext):
+    logging.config.dictConfig(LOGGING_CONFIG)
+    user_id = call.from_user.id
+
     async with channel_pool.acquire() as channel:
         exchange = await channel.declare_exchange(
                 "user_form", ExchangeType.TOPIC, durable=True
@@ -29,7 +33,7 @@ async def my_matches_handler(call: CallbackQuery, state: FSMContext, message: Me
         queue = await channel.declare_queue(
             settings.USER_QUEUE.format(user_id=user_id), durable=True
         )
-
+        await queue.bind(exchange, settings.USER_QUEUE.format(user_id=user_id))
         body = {
             "id": call.from_user.id,
             "action": "get_my_matches",
@@ -42,7 +46,7 @@ async def my_matches_handler(call: CallbackQuery, state: FSMContext, message: Me
         retries = 3
         for _ in range(retries):
             try:
-                res = await queue.get(timeout=5)
+                res = await queue.get()
                 await res.ack()
                 data = msgpack.unpackb(res.body)
 

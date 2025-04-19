@@ -7,8 +7,10 @@ import aio_pika
 import msgpack
 from config.settings import settings
 from consumer.storage import rabbit
-
+import logging.config
+from consumer.logger import logger, LOGGING_CONFIG
 async def get_my_matches(body: dict):
+    logging.config.dictConfig(LOGGING_CONFIG)
     user_id = body["id"]
     response_matches = []
 
@@ -22,10 +24,10 @@ async def get_my_matches(body: dict):
                         Like.is_mutual == True
                     )
                 )
-            ).subquery()
+            )
 
             query = (
-                select(User.id, User.name, User.age, User.description)
+                select(User.id, User.name, User.age)
                 .where(User.id.in_(subquery))
             )
 
@@ -43,24 +45,22 @@ async def get_my_matches(body: dict):
                 if not conversation:
                     conversation = Conversation(user1_id=user_id, user2_id=match.id)
                     db.add(conversation)
-                    await db.commit()
+                    
 
                 response_matches.append({
                     "id": match.id,
                     "name": match.name,
                     "age": match.age,
-                    "description": match.description,
                     "conversation_id": conversation.id
                 })
-        
-        except SQLAlchemyError as e:
+            await db.commit()
+        except Exception as e:
+            logger.info(e)
             response_matches = []
-
     async with rabbit.channel_pool.acquire() as channel:
         exchange = await channel.declare_exchange(
             "user_form", ExchangeType.TOPIC, durable=True
         )
-
         await exchange.publish(
             aio_pika.Message(
                 body=msgpack.packb({"matches": response_matches}),

@@ -5,7 +5,6 @@ from src.model.model import User
 from src.storage.rabbit import channel_pool
 from consumer.logger import logger, LOGGING_CONFIG
 import logging.config
-
 async def change_form(body: dict):
     logging.config.dictConfig(LOGGING_CONFIG)
     logger.info(f"Прием запроса: {body}")
