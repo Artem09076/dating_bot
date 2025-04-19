@@ -1,32 +1,45 @@
 import msgpack
-from sqlalchemy import update
+from sqlalchemy import update, select
 from src.storage.db import async_session
 from src.model.model import User
 from src.storage.rabbit import channel_pool
+from consumer.logger import logger, LOGGING_CONFIG
+import logging.config
 
-async def change_form(data: dict):
-    user_id = data.get("id")
-    if not user_id:
-        print("Нет ID пользователя в сообщении")
-        return
+async def change_form(body: dict):
+    logging.config.dictConfig(LOGGING_CONFIG)
+    logger.info(f"Прием запроса: {body}")
+    user_id = body.get("id")
 
-    async with async_session() as session:
-        await session.execute(
-            update(User)
-            .where(User.id == user_id)
-            .values(
-                name=data.get("name"),
-                age=data.get("age"),
-                gender=data.get("gender"),
-                city=data.get("city"),
-                interests=",".join(data.get("interests", [])) if isinstance(data.get("interests"), list) else data.get("interests"),
-                preferred_gender=data.get("preferred_gender"),
-                preferred_age_min=data.get("preferred_age_min"),
-                preferred_age_max=data.get("preferred_age_max"),
-                preferred_city=data.get("preferred_city"),
-                photo=data.get("photo"),
+    async with async_session() as db:
+        try:
+            user_query = await db.execute(select(User).where(User.id == user_id))
+            user = user_query.scalar_one_or_none()
+            existing_interests = user.interests if user.interests is not None else ""
+            interests = (
+                ",".join(body["interests"]) if isinstance(body.get("interests"), list)
+                else body.get("interests", existing_interests)
             )
-        )
-        await session.commit()
+            res = await db.execute(
+                update(User)
+                .where(User.id == user_id)
+                .values(
+                    name=body.get("name", user.name),
+                    age=body.get("age", user.age),
+                    gender=body.get("gender", user.gender),
+                    city=body.get("city", user.city),
+                    interests=interests,
+                    preferred_gender=body.get("preferred_gender", user.preferred_gender),
+                    preferred_age_min=body.get("preferred_age_min", user.preferred_age_min),
+                    preferred_age_max=body.get("preferred_age_max", user.preferred_age_max),
+                    preferred_city=body.get("preferred_city", user.preferred_city),
+                    photo=body.get("photo", user.photo),
+                )
+            )
+            logger.info(res)
+            await db.commit()
+        except Exception as err:
+            await db.rollback()
+            logger.exception(err)
 
-    print(f"✅ Анкета пользователя {user_id} успешно обновлена.")
+
