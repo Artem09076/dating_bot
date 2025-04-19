@@ -4,24 +4,7 @@ from src.storage.db import async_session
 from src.model.model import User
 from src.storage.rabbit import channel_pool
 
-async def change_form():
-    async with channel_pool.acquire() as channel:
-        queue = await channel.declare_queue("user_messages", durable=True)
-
-        async with queue.iterator() as queue_iter:
-            async for message in queue_iter:
-                async with message.process():
-                    try:
-                        data = msgpack.unpackb(message.body, raw=False)
-                        action = data.get("action")
-
-                        if action == "update_form":
-                            await process_update_form(data)
-
-                    except Exception as e:
-                        print(f"Ошибка обработки сообщения: {e}")
-
-async def process_update_form(data: dict):
+async def change_form(data: dict):
     user_id = data.get("id")
     if not user_id:
         print("Нет ID пользователя в сообщении")
