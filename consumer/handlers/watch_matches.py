@@ -14,6 +14,8 @@ async def get_my_matches(body: dict):
     user_id = body["id"]
     response_matches = []
 
+    logger.info("ЗАПРОС В БАЗУ НА МЕТЧИ")
+
     async with async_session() as db:
         try:
             subquery = (
@@ -57,6 +59,9 @@ async def get_my_matches(body: dict):
         except Exception as e:
             logger.info(e)
             response_matches = []
+
+    logger.info("ОТПРАВКА МЕТЧЕЙ В ОЧЕРЕДЬ")
+    
     async with rabbit.channel_pool.acquire() as channel:
         exchange = await channel.declare_exchange(
             "user_form", ExchangeType.TOPIC, durable=True

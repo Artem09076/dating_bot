@@ -43,7 +43,7 @@ async def find_pair_handler(call: CallbackQuery, state: FSMContext):
             "action": "find_pair"
         }
 
-        logger.info("ЗАПРОС ПОШЕЛ В USER_MEASSAGES")
+        logger.info("ЗАПРОС ПОШЕЛ В USER_MESSAGES")
 
         await exchange.publish(
             aio_pika.Message(msgpack.packb(request_body)),

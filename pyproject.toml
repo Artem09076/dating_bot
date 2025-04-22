@@ -21,6 +21,7 @@ minio = "^7.2.15"
 pyyaml = "^6.0.2"
 colorama = "^0.4.6"
 prometheus-client = "^0.21.1"
+celery = "^5.5.1"
 
 
 [build-system]

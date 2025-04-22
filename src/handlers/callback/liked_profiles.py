@@ -150,8 +150,6 @@ async def handle_reaction(callback: CallbackQuery, state: FSMContext):
 
         logger.info("ОТПРАВКА МЭТЧЕЙ И НЕ МЕТЧЕЙ В ОЧЕРЕДЬ")
         
-        # TODO я хз, какая тут будет лучше очередь
-
         await exchange.publish(
             aio_pika.Message(
                 msgpack.packb(request_body)
@@ -159,7 +157,6 @@ async def handle_reaction(callback: CallbackQuery, state: FSMContext):
             routing_key="user_messages"
         )
 
-        # await notify_liked_user(liked_user_id, callback.from_user.id)
 
     await state.update_data(current_index=index + 1)
     logger.info("СЛЕДУЮЩИЙ!!!!!!!")

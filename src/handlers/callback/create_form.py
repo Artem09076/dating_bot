@@ -74,7 +74,7 @@ async def process_gender(callback: CallbackQuery, state: FSMContext) -> None:
 @router.message(F.text, ProfileForm.city)
 async def process_city(message: Message, state: FSMContext):
     if message.text and not message.text.isdigit():
-        await state.update_data(city=message.text)
+        await state.update_data(city=message.text.lower())
         if isinstance(message, Message):
             await message.answer("Расскажи о своих интересах:")
         await state.set_state(ProfileForm.interests)
