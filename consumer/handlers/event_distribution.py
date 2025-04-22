@@ -10,7 +10,6 @@ from consumer.handlers.delete_profile import delete_profile
 from consumer.handlers.change_form import change_form
 from consumer.handlers.watch_matches import get_my_matches
 
-
 async def handle_event_distribution(body: Dict[str, Any]) -> None:
     match body["action"]:
         case "make_form":
@@ -29,4 +28,3 @@ async def handle_event_distribution(body: Dict[str, Any]) -> None:
             await change_form(body)
         case 'get_my_matches':
             await get_my_matches(body)
-
