@@ -20,6 +20,11 @@ services:
     image: redis:6.2.4
     ports:
       - "6385:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   rabbitmq:
     image: rabbitmq:3.13.7-management
@@ -91,6 +96,33 @@ services:
       - minio-data:/data
     command: server --console-address ":9001" /data
 
+  celery_worker:
+    build:
+      context: .
+    command: celery -A script.calculate_ratings worker --loglevel=info
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - .:/code
+
+  celery_beat:
+    build:
+      context: .
+    command: celery -A script.calculate_ratings beat --loglevel=info
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - .:/code
 
 volumes:
   database-data:
