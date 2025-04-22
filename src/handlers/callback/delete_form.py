@@ -46,6 +46,9 @@ async def delete_form(call: CallbackQuery):
         body = {"id": user_id, "action": "delete_profile"}
         await exchange.publish(aio_pika.Message(msgpack.packb(body)), "user_messages")
         SEND_MESSAGE.inc()
+        await call.message.delete()
+        await call.message.answer('Анкета успешно удалена')
+
 
 @router.callback_query(F.data=='return_form')
 async def return_get_profile(call: CallbackQuery):
