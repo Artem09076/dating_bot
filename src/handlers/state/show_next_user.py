@@ -1,12 +1,20 @@
-import msgpack
-from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, BufferedInputFile
 from io import BytesIO
-from src.handlers.state.like_profile import LikedProfilesFlow
-from src.handlers.command.menu import menu
-from src.templates.env import render
-from src.storage.minio import minio_client
-from config.settings import settings
+
+import msgpack
 from aiogram.fsm.context import FSMContext
+from aiogram.types import (
+    BufferedInputFile,
+    CallbackQuery,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+)
+
+from config.settings import settings
+from src.handlers.command.menu import menu
+from src.handlers.state.like_profile import LikedProfilesFlow
+from src.storage.minio import minio_client
+from src.templates.env import render
+
 
 async def show_next_liked_user(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
@@ -24,11 +32,22 @@ async def show_next_liked_user(callback: CallbackQuery, state: FSMContext):
     caption = render("candidate_card.jinja2", **liked_user)
     buttons = []
     if conversation_id:
-        buttons.append([InlineKeyboardButton(text="✉️ Перейти к беседе", callback_data=f"open_conversation_{conversation_id}")])
+        buttons.append(
+            [
+                InlineKeyboardButton(
+                    text="✉️ Перейти к беседе",
+                    callback_data=f"open_conversation_{conversation_id}",
+                )
+            ]
+        )
     buttons += [
         [InlineKeyboardButton(text="❤️ Лайк", callback_data="like_on_like")],
         [InlineKeyboardButton(text="👎 Дизлайк", callback_data="dislike_on_like")],
-        [InlineKeyboardButton(text="❌ Закончить просмотр", callback_data="stop_search")]
+        [
+            InlineKeyboardButton(
+                text="❌ Закончить просмотр", callback_data="stop_search"
+            )
+        ],
     ]
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
     await callback.message.answer_photo(caption=caption, reply_markup=keyboard)

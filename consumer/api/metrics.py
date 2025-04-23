@@ -1,6 +1,7 @@
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from starlette.requests import Request
 from starlette.responses import Response
+
 from consumer.api.router import router
 
 

@@ -4,8 +4,8 @@ from typing import AsyncGenerator
 
 from fastapi import FastAPI
 
-from consumer.app import main
 from consumer.api.router import router
+from consumer.app import main
 
 
 @asynccontextmanager

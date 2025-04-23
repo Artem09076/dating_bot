@@ -1,34 +1,35 @@
-from src.handlers.callback.router import router
-from aiogram import F
-from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
-from src.storage.rabbit import channel_pool
-from aio_pika import ExchangeType
-from config.settings import settings
 import aio_pika
 import msgpack
-from src.logger import logger, LOGGING_CONFIG
-from src.metrics import SEND_MESSAGE
-from src.handlers.command.get_profile import get_profile
+from aio_pika import ExchangeType
+from aiogram import F
+from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 
-@router.callback_query(F.data=='delete_form')
+from config.settings import settings
+from src.handlers.callback.router import router
+from src.handlers.command.get_profile import get_profile
+from src.logger import LOGGING_CONFIG, logger
+from src.metrics import SEND_MESSAGE
+from src.storage.rabbit import channel_pool
+
+
+@router.callback_query(F.data == "delete_form")
 async def start_delete_form(call: CallbackQuery):
     buttons = [
-                    [
-                        InlineKeyboardButton(
-                            text="Удалить", callback_data="final_delete"
-                        ),
-                        InlineKeyboardButton(
-                            text='Вернуться к анкете', callback_data='return_form'
-                        )
-
-                    ]
-                ]
+        [
+            InlineKeyboardButton(text="Удалить", callback_data="final_delete"),
+            InlineKeyboardButton(
+                text="Вернуться к анкете", callback_data="return_form"
+            ),
+        ]
+    ]
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
     await call.message.answer(
-        text='Вы уверены, что хотите удалить анкету, действие назад отменить нельзя будет',
-        reply_markup=keyboard)
+        text="Вы уверены, что хотите удалить анкету, действие назад отменить нельзя будет",
+        reply_markup=keyboard,
+    )
 
-@router.callback_query(F.data=='final_delete')
+
+@router.callback_query(F.data == "final_delete")
 async def delete_form(call: CallbackQuery):
     user_id = call.from_user.id
     async with channel_pool.acquire() as channel:
@@ -47,11 +48,9 @@ async def delete_form(call: CallbackQuery):
         await exchange.publish(aio_pika.Message(msgpack.packb(body)), "user_messages")
         SEND_MESSAGE.inc()
         await call.message.delete()
-        await call.message.answer('Анкета успешно удалена')
+        await call.message.answer("Анкета успешно удалена")
 
 
-@router.callback_query(F.data=='return_form')
+@router.callback_query(F.data == "return_form")
 async def return_get_profile(call: CallbackQuery):
     await call.message.delete()
-        
-        

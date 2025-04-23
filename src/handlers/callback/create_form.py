@@ -18,9 +18,9 @@ from config.settings import settings
 from src.handlers.callback.router import router
 from src.handlers.command.gender import gender_keyboard
 from src.handlers.state.made_form import ProfileForm
+from src.metrics import NEW_PROFILES, SEND_MESSAGE
 from src.storage.minio import minio_client
 from src.storage.rabbit import channel_pool
-from src.metrics import NEW_PROFILES, SEND_MESSAGE
 
 
 @router.callback_query(F.data == "make_form")

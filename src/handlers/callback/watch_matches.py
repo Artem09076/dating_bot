@@ -1,21 +1,21 @@
-import msgpack
-from aiogram import Router
-from aio_pika import ExchangeType
-from src.storage.rabbit import channel_pool
-from src.handlers.state.like_profile import LikedProfilesFlow
-from src.handlers.command.menu import menu
-from src.handlers.callback.router import router
-from aiogram.fsm.context import FSMContext
-from config.settings import settings
+import asyncio
+import logging.config
+
 import aio_pika
 import msgpack
 from aio_pika import ExchangeType
-import asyncio
-from aiogram import F
-from src.handlers.state.show_next_user import show_next_liked_user
+from aiogram import F, Router
+from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
-from src.logger import logger, LOGGING_CONFIG
-import logging.config
+
+from config.settings import settings
+from src.handlers.callback.router import router
+from src.handlers.command.menu import menu
+from src.handlers.state.like_profile import LikedProfilesFlow
+from src.handlers.state.show_next_user import show_next_liked_user
+from src.logger import LOGGING_CONFIG, logger
+from src.storage.rabbit import channel_pool
+
 
 @router.callback_query(F.data == "my_matches")
 async def my_matches_handler(call: CallbackQuery, state: FSMContext):
@@ -25,12 +25,12 @@ async def my_matches_handler(call: CallbackQuery, state: FSMContext):
 
     async with channel_pool.acquire() as channel:
         exchange = await channel.declare_exchange(
-                "user_form", ExchangeType.TOPIC, durable=True
-            )
-        
+            "user_form", ExchangeType.TOPIC, durable=True
+        )
+
         user_queue = await channel.declare_queue("user_messages", durable=True)
 
-        await user_queue.bind(exchange, 'user_messages')
+        await user_queue.bind(exchange, "user_messages")
         queue = await channel.declare_queue(
             settings.USER_QUEUE.format(user_id=user_id), durable=True
         )
@@ -40,9 +40,11 @@ async def my_matches_handler(call: CallbackQuery, state: FSMContext):
             "action": "get_my_matches",
         }
 
+
         logger.info("ОТПРАВКА В ОЧЕРЕДЬ ЗАПРОСА НА МЕТЧИ")
 
         await exchange.publish(aio_pika.Message(msgpack.packb(body)), routing_key="user_messages")
+
 
         await call.message.answer("Проверяю ваши мэтчи...")
 
@@ -69,4 +71,3 @@ async def my_matches_handler(call: CallbackQuery, state: FSMContext):
                 await asyncio.sleep(1)
 
         await call.message.answer("Не удалось получить ваши мэтчи. Попробуйте позже.")
-
