@@ -135,8 +135,8 @@ def periodic_recalculate_ratings():
 
 
 app.conf.beat_schedule = {
-    "recalculate-all-user-ratings-every-6-hours": {
+    "recalculate-all-user-ratings-every-5-minutes": {
         "task": "script.calculate_ratings.periodic_recalculate_ratings",
-        "schedule": crontab(minute='*/1'),
+        "schedule": crontab(minute='*/5'),
     },
 }
