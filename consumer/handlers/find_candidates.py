@@ -28,11 +28,11 @@ async def find_candidates(body):
         user = result.scalar_one_or_none()
         if not user:
             return
-
+        
         if not user.combined_rating:
             logger.info(f"У пользователя {user.id} нет комбинированного рейтинга!")
             return []
-
+        
         logger.info("ПРИНЯЛИ ЮЗЕРА ИЗ БД, ЩАС ФИЛЬТРЫ")
 
         filters = [
@@ -72,3 +72,34 @@ async def find_candidates(body):
         candidates = candidates_result.scalars().all()
 
         candidates_data = [c.to_dict() for c in candidates]
+
+        logger.info("КАНДИДАТЫ СФОРМИРОВАНЫ")
+
+
+    async with channel_pool.acquire() as channel:
+        exchange = await channel.declare_exchange(
+            "user_form", ExchangeType.TOPIC, durable=True
+        )        
+        
+        user_queue = await channel.declare_queue(
+            settings.USER_QUEUE.format(user_id=user_id),
+            durable=True
+        )
+
+        await user_queue.bind(
+            exchange,
+            settings.USER_QUEUE.format(user_id=user_id),
+        )
+
+        response_body = {
+            "action": "show_candidates",
+            "user_id": user_id,
+            "candidates": candidates_data
+        }
+
+        logger.info("ОТПРАВКА КАНДИДАТОВ В ОЧЕРЕДЬ")
+
+        await exchange.publish(
+            Message(msgpack.packb(response_body)),
+            routing_key=settings.USER_QUEUE.format(user_id=user_id)
+        )

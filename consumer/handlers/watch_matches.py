@@ -22,11 +22,26 @@ async def get_my_matches(body: dict):
 
     async with async_session() as db:
         try:
-            subquery = select(Like.from_user_id).where(
-                and_(Like.to_user_id == user_id, Like.is_mutual == True)
+            subquery = (
+                select(Like.from_user_id)
+                .where(
+                    and_(
+                        Like.to_user_id == user_id,
+                        Like.is_mutual == True
+                    )
+                )
+                .union(
+                    select(Like.to_user_id)
+                    .where(
+                        and_(
+                            Like.from_user_id == user_id,
+                            Like.is_mutual == True
+                        )
+                    )
+                )
             )
 
-            query = select(User.id, User.name, User.age).where(User.id.in_(subquery))
+            query = select(User.id, User.name, User.age, User.photo,).where(User.id.in_(subquery))
 
             result = await db.execute(query)
             matches = result.mappings().all()
@@ -54,6 +69,7 @@ async def get_my_matches(body: dict):
                         "id": match.id,
                         "name": match.name,
                         "age": match.age,
+                        "photo": match.photo,
                         "conversation_id": conversation.id,
                     }
                 )

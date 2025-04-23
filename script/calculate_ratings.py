@@ -114,22 +114,29 @@ async def calculate_user_rating(user_id: int, db: AsyncSession):
     await db.commit()
 
 
+
 async def recalculate_all_users():
     async with async_session() as db:
         users = await db.execute(select(User.id))
         user_ids = [row[0] for row in users.fetchall()]
-        for user_id in user_ids:
-            await calculate_user_rating(user_id, db)
+
+    for user_id in user_ids:
+        async with async_session() as db:
+            try:
+                await calculate_user_rating(user_id, db)
+            except Exception as e:
+                logger.error(f"Ошибка при пересчете рейтинга для user_id={user_id}: {e}")
 
 
 @app.task
 def periodic_recalculate_ratings():
-    asyncio.run(recalculate_all_users())
+    loop = asyncio.get_event_loop()
+    loop.create_task(recalculate_all_users())
 
 
 app.conf.beat_schedule = {
     "recalculate-all-user-ratings-every-6-hours": {
         "task": "script.calculate_ratings.periodic_recalculate_ratings",
-        "schedule": crontab(minute=0, hour="*/6"),
+        "schedule": crontab(minute='*/1'),
     },
 }
