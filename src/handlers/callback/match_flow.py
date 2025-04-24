@@ -157,8 +157,6 @@ async def handle_reaction(callback: CallbackQuery, state: FSMContext):
             )
 
 
-        # await notify_liked_user(liked_user_id, callback.from_user.id)
-
     await state.update_data(current_index=index + 1)
     logger.info("СЛЕДУЮЩИЙ!!!!!!!")
     await show_next_candidate(callback, state)
@@ -171,8 +169,3 @@ async def stop_search(callback: CallbackQuery, state: FSMContext):
     await menu(callback.message)
     await state.clear()
     return
-    
-
-# async def notify_liked_user(target_user_id, who_liked_id):
-#     logger.info("МЫ В УВЕДОМЛЕНИИ О ЛАЙКЕ")
-    # await callback.message.answer("Вы поставили лайк этой анкете")
