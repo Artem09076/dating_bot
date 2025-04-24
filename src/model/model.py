@@ -74,7 +74,7 @@ class PrimaryRating(Base):
     __tablename__ = "primary_ratings"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("public.user.id"), unique=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("public.user.id", ondelete="CASCADE"), unique=True)
     completeness_score: Mapped[float] = mapped_column(default=0.0)
     photo_score: Mapped[float] = mapped_column(default=0.0)
     preference_match_score: Mapped[float] = mapped_column(default=0.0)
@@ -86,7 +86,7 @@ class BehaviorRating(Base):
     __tablename__ = "behavior_ratings"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("public.user.id"), unique=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("public.user.id", ondelete='CASCADE'), unique=True)
     likes_received: Mapped[int] = mapped_column(default=0)
     likes_skipped_ratio: Mapped[float] = mapped_column(default=0.0)
     mutual_likes: Mapped[int] = mapped_column(default=0)
@@ -100,7 +100,7 @@ class CombinedRating(Base):
     __tablename__ = "combined_ratings"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("public.user.id"), unique=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("public.user.id", ondelete='CASCADE'), unique=True)
     score: Mapped[float] = mapped_column(default=0.0)
 
     user = relationship("User", back_populates="combined_rating")
@@ -110,8 +110,8 @@ class Like(Base):
     __tablename__ = "likes"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    from_user_id: Mapped[int] = mapped_column(ForeignKey("public.user.id"))
-    to_user_id: Mapped[int] = mapped_column(ForeignKey("public.user.id"))
+    from_user_id: Mapped[int] = mapped_column(ForeignKey("public.user.id", ondelete='CASCADE'))
+    to_user_id: Mapped[int] = mapped_column(ForeignKey("public.user.id", ondelete='CASCADE'))
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
     
     is_mutual: Mapped[bool] = mapped_column(nullable=True)
@@ -125,8 +125,8 @@ class Conversation(Base):
     __tablename__ = "conversation"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user1_id: Mapped[int] = mapped_column(ForeignKey("public.user.id"))
-    user2_id: Mapped[int] = mapped_column(ForeignKey("public.user.id"))
+    user1_id: Mapped[int] = mapped_column(ForeignKey("public.user.id", ondelete='CASCADE'))
+    user2_id: Mapped[int] = mapped_column(ForeignKey("public.user.id", ondelete='CASCADE'))
     started_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
 
     user1 = relationship("User", foreign_keys=[user1_id])
