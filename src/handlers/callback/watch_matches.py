@@ -40,11 +40,11 @@ async def my_matches_handler(call: CallbackQuery, state: FSMContext):
             "action": "get_my_matches",
         }
 
-
         logger.info("ОТПРАВКА В ОЧЕРЕДЬ ЗАПРОСА НА МЕТЧИ")
 
-        await exchange.publish(aio_pika.Message(msgpack.packb(body)), routing_key="user_messages")
-
+        await exchange.publish(
+            aio_pika.Message(msgpack.packb(body)), routing_key="user_messages"
+        )
 
         await call.message.answer("Проверяю ваши мэтчи...")
 
@@ -72,20 +72,21 @@ async def my_matches_handler(call: CallbackQuery, state: FSMContext):
 
         await call.message.answer("Не удалось получить ваши мэтчи. Попробуйте позже.")
 
+
 @router.callback_query(F.data.startswith("open_conversation_"))
 async def open_conversation_handler(callback: CallbackQuery, state: FSMContext):
     conversation_id = int(callback.data.split("_")[-1])
     data = await state.get_data()
     index = data.get("current_index", 1) - 1
     likes = data.get("likes", [])
-    
+
     if 0 <= index < len(likes):
         user = likes[index]
         if callback.from_user.username:
             await callback.message.answer(
                 f"Открываем беседу №{conversation_id}.\n"
                 f"👉 [Перейти в Telegram](tg://user?id={user.get('id')})",
-                parse_mode="Markdown"
+                parse_mode="Markdown",
             )
         else:
             await callback.message.answer(
@@ -95,4 +96,3 @@ async def open_conversation_handler(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer("Не удалось определить пользователя.")
 
     await callback.answer()
-

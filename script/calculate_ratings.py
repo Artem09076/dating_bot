@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config.settings import settings
-from consumer.logger import logger
+from consumer.logger import logger, LOGGING_CONFIG
 from consumer.storage.db import async_session
 from src.model.model import (
     BehaviorRating,
@@ -17,7 +17,6 @@ from src.model.model import (
     PrimaryRating,
     User,
 )
-
 app = Celery(
     "tasks", broker=settings.celery_broker_url, backend=settings.celery_result_backend
 )
@@ -31,6 +30,7 @@ app.conf.update(
 
 
 async def calculate_user_rating(user_id: int, db: AsyncSession):
+    logging.config.dictConfig(LOGGING_CONFIG)
     user = await db.get(User, user_id)
     if not user:
         logger.error(f"Пользователь с id {user_id} не найден.")
@@ -110,9 +110,9 @@ async def calculate_user_rating(user_id: int, db: AsyncSession):
         combined_rating = CombinedRating(user_id=user.id)
     combined_rating.score = combined_score
     db.add(combined_rating)
+    logger.info('asdf')
 
     await db.commit()
-
 
 
 async def recalculate_all_users():
@@ -120,23 +120,23 @@ async def recalculate_all_users():
         users = await db.execute(select(User.id))
         user_ids = [row[0] for row in users.fetchall()]
 
-    for user_id in user_ids:
-        async with async_session() as db:
-            try:
-                await calculate_user_rating(user_id, db)
-            except Exception as e:
-                logger.error(f"Ошибка при пересчете рейтинга для user_id={user_id}: {e}")
+        for user_id in user_ids:
+                async with async_session() as db:
+                    try:
+                        await calculate_user_rating(user_id, db)
+                    except Exception as e:
+                        logger.error(f"Ошибка при пересчете рейтинга для user_id={user_id}: {e}")
 
 
-@app.task
+@app.task()
 def periodic_recalculate_ratings():
     loop = asyncio.get_event_loop()
-    loop.create_task(recalculate_all_users())
+    return loop.run_until_complete(recalculate_all_users())
 
 
 app.conf.beat_schedule = {
     "recalculate-all-user-ratings-every-5-minutes": {
         "task": "script.calculate_ratings.periodic_recalculate_ratings",
-        "schedule": crontab(minute='*/5'),
+        "schedule": crontab(minute="*/5"),
     },
 }

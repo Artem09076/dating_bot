@@ -162,7 +162,6 @@ async def handle_reaction(callback: CallbackQuery, state: FSMContext):
             aio_pika.Message(msgpack.packb(request_body)), routing_key="user_messages"
         )
 
-
     await state.update_data(current_index=index + 1)
     logger.info("СЛЕДУЮЩИЙ!!!!!!!")
     await show_next_liked_user(callback, state)

@@ -88,8 +88,7 @@ async def process_interests(message: Message, state: FSMContext) -> None:
     interest = message.text
     pattern = r"^\s*[\w\s\-]+(?:\s*,\s*[\w\s\-]+)+\s*$"
     if interest and re.match(pattern, interest):
-        interests_list = [i.strip() for i in interest.split(",") if i.strip()]
-        await state.update_data(interests=interests_list)
+        await state.update_data(interests=interest)
         await message.answer("Отправь своё фото:")
         await state.set_state(ProfileForm.photo)
     else:

@@ -2,12 +2,8 @@ from io import BytesIO
 
 import msgpack
 from aiogram.fsm.context import FSMContext
-from aiogram.types import (
-    BufferedInputFile,
-    CallbackQuery,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-)
+from aiogram.types import (BufferedInputFile, CallbackQuery,
+                           InlineKeyboardButton, InlineKeyboardMarkup)
 
 from config.settings import settings
 from src.handlers.command.menu import menu

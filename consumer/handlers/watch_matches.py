@@ -24,24 +24,20 @@ async def get_my_matches(body: dict):
         try:
             subquery = (
                 select(Like.from_user_id)
-                .where(
-                    and_(
-                        Like.to_user_id == user_id,
-                        Like.is_mutual == True
-                    )
-                )
+                .where(and_(Like.to_user_id == user_id, Like.is_mutual == True))
                 .union(
-                    select(Like.to_user_id)
-                    .where(
-                        and_(
-                            Like.from_user_id == user_id,
-                            Like.is_mutual == True
-                        )
+                    select(Like.to_user_id).where(
+                        and_(Like.from_user_id == user_id, Like.is_mutual == True)
                     )
                 )
             )
 
-            query = select(User.id, User.name, User.age, User.photo,).where(User.id.in_(subquery))
+            query = select(
+                User.id,
+                User.name,
+                User.age,
+                User.photo,
+            ).where(User.id.in_(subquery))
 
             result = await db.execute(query)
             matches = result.mappings().all()
@@ -79,7 +75,7 @@ async def get_my_matches(body: dict):
             response_matches = []
 
     logger.info("ОТПРАВКА МЕТЧЕЙ В ОЧЕРЕДЬ")
-    
+
     async with rabbit.channel_pool.acquire() as channel:
         exchange = await channel.declare_exchange(
             "user_form", ExchangeType.TOPIC, durable=True
