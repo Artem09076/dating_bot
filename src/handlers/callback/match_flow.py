@@ -55,7 +55,7 @@ async def find_pair_handler(call: CallbackQuery, state: FSMContext):
                 await res.ack()
                 data = msgpack.unpackb(res.body)
                 candidates = data.get("candidates", [])
-                logger.info("ПРИНЯЛИ КАНДИДАТОВ")
+                logger.info(f"ПРИНЯЛИ КАНДИДАТОВ : {data}")
                 if not candidates:
                     await call.message.answer("😕 Подходящих анкет не найдено.")
                     return

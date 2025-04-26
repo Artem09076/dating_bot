@@ -39,16 +39,8 @@ async def show_next_liked_user(callback: CallbackQuery, state: FSMContext):
 
     caption = render("candidate_card.jinja2", **liked_user)
 
-    buttons = []
-    if conversation_id:
-        cb_data = f"open_conversation_{conversation_id}"
-        buttons.append(
+    buttons = [
             [InlineKeyboardButton(text="✉️ Перейти к беседе", url=f'tg://user?id={liked_user.get('id')}')]
-        )
-    buttons += [
-        [InlineKeyboardButton(text="❤️ Лайк", callback_data="like_on_like")],
-        [InlineKeyboardButton(text="👎 Дизлайк", callback_data="dislike_on_like")],
-        [InlineKeyboardButton(text="❌ Закончить просмотр", callback_data="stop_search")],
     ]
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
