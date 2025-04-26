@@ -16,6 +16,7 @@ TOLERANCE = 0.1
 
 async def find_candidates(body):
     user_id = body.get("user_id")
+    candidates_data = []
     try:
         async with async_session() as db:
             logging.config.dictConfig(LOGGING_CONFIG)
@@ -32,7 +33,7 @@ async def find_candidates(body):
 
             if not user.combined_rating:
                 logger.info(f"У пользователя {user.id} нет комбинированного рейтинга!")
-                return []
+                return
 
             logger.info("ПРИНЯЛИ ЮЗЕРА ИЗ БД, ЩАС ФИЛЬТРЫ")
 
@@ -77,6 +78,7 @@ async def find_candidates(body):
             logger.info(f"КАНДИДАТЫ СФОРМИРОВАНЫ {candidates_data}")
     except Exception as err:
         logger.error(err)
+        return
 
     async with channel_pool.acquire() as channel:
         exchange = await channel.declare_exchange(
