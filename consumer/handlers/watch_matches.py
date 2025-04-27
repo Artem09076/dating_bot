@@ -17,7 +17,6 @@ async def get_my_matches(body: dict):
     logging.config.dictConfig(LOGGING_CONFIG)
     user_id = body["id"]
     response_matches = []
-
     logger.info("ЗАПРОС В БАЗУ НА МЕТЧИ")
 
     async with async_session() as db:
@@ -36,6 +35,9 @@ async def get_my_matches(body: dict):
                 User.id,
                 User.name,
                 User.age,
+                User.gender,
+                User.city,
+                User.interests,
                 User.photo,
             ).where(User.id.in_(subquery))
 
@@ -65,6 +67,9 @@ async def get_my_matches(body: dict):
                         "id": match.id,
                         "name": match.name,
                         "age": match.age,
+                        "gender": match.gender.value if match.gender else None,
+                        "city": match.city,
+                        "interests": match.interests,
                         "photo": match.photo,
                         "conversation_id": conversation.id,
                     }
@@ -74,7 +79,7 @@ async def get_my_matches(body: dict):
             logger.info(e)
             response_matches = []
 
-    logger.info("ОТПРАВКА МЕТЧЕЙ В ОЧЕРЕДЬ")
+    logger.info(f"ОТПРАВКА МЕТЧЕЙ В ОЧЕРЕДЬ {response_matches}")
 
     async with rabbit.channel_pool.acquire() as channel:
         exchange = await channel.declare_exchange(

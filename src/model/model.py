@@ -17,9 +17,9 @@ from src.model.meta import Base
 
 
 class GenderEnum(enum.Enum):
-    male = "male"
-    female = "female"
-    other = "other"
+    male = "Мужской"
+    female = "Женский"
+    other = "Другое"
 
 
 class User(Base):

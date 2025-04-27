@@ -56,9 +56,9 @@ async def process_age(message: Message, state: FSMContext) -> None:
 @router.callback_query(F.data.startswith("gender_"), ProfileForm.gender)
 async def process_gender(callback: CallbackQuery, state: FSMContext) -> None:
     gender_map = {
-        "gender_male": "male",
-        "gender_female": "female",
-        "gender_other": "other",
+        "gender_male": "Мужской",
+        "gender_female": "Женский",
+        "gender_other": "Другое",
     }
 
     gender = gender_map.get(callback.data)
@@ -133,8 +133,7 @@ async def process_photo(message: Message, state: FSMContext) -> None:
 
 @router.message(F.text, ProfileForm.preferred_gender)
 async def process_preferred_gender(message: Message, state: FSMContext) -> None:
-    gender_map = {"Мужской": "male", "Женский": "female", "Все равно": "other"}
-
+    gender_map = {"Мужской": "Мужской", "Женский": "Женский", "Все равно": "Другое"}
     message.edit_reply_markup(reply_markup=None)
     if message.text and not message.text.isdigit():
         await state.update_data(preferred_gender=gender_map.get(message.text))
