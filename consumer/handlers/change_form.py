@@ -4,13 +4,17 @@ import msgpack
 from sqlalchemy import select, update
 
 from consumer.logger import LOGGING_CONFIG, logger
-from src.model.model import User
+from src.model.model import User, GenderEnum
 from src.storage.db import async_session
 from src.storage.rabbit import channel_pool
 
 
 async def change_form(body: dict):
     logging.config.dictConfig(LOGGING_CONFIG)
+<<<<<<< HEAD
+=======
+    logger.info(f"ПРИЕМ ЗАПРОСА НА ИЗМЕНЕНИЕ АНКЕТЫ: {body}")
+>>>>>>> drain678-master
     user_id = body.get("id")
 
     async with async_session() as db:
@@ -23,18 +27,41 @@ async def change_form(body: dict):
                 if isinstance(body.get("interests"), list)
                 else body.get("interests", existing_interests)
             )
-            res = await db.execute(
+
+            gender_value = body.get("gender")
+            if isinstance(gender_value, str):
+                try:
+                    gender_value = GenderEnum(gender_value)
+                except ValueError:
+                    logger.warning(
+                        f"Некорректное значение пола: {gender_value}. Оставляем старое.")
+                    gender_value = user.gender
+            else:
+                gender_value = user.gender
+
+            preferred_gender_value = body.get("preferred_gender")
+            if isinstance(preferred_gender_value, str):
+                try:
+                    preferred_gender_value = GenderEnum(preferred_gender_value)
+                except ValueError:
+                    logger.warning(
+                        f"Некорректное значение предпочтительного пола: {preferred_gender_value}. Оставляем старое."
+                    )
+                    preferred_gender_value = user.preferred_gender
+            else:
+                preferred_gender_value = user.preferred_gender
+
+            
+            await db.execute(
                 update(User)
                 .where(User.id == user_id)
                 .values(
                     name=body.get("name", user.name),
                     age=body.get("age", user.age),
-                    gender=body.get("gender", user.gender),
+                    gender=gender_value,
                     city=body.get("city", user.city),
                     interests=interests,
-                    preferred_gender=body.get(
-                        "preferred_gender", user.preferred_gender
-                    ),
+                    preferred_gender=preferred_gender_value,
                     preferred_age_min=body.get(
                         "preferred_age_min", user.preferred_age_min
                     ),
@@ -45,6 +72,10 @@ async def change_form(body: dict):
                     photo=body.get("photo", user.photo),
                 )
             )
+<<<<<<< HEAD
+=======
+            logger.info(f"ИЗМЕНЕНИЕ АНКЕТЫ В БАЗЕ {body}")
+>>>>>>> drain678-master
             await db.commit()
         except Exception as err:
             await db.rollback()
