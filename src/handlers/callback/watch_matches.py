@@ -5,7 +5,6 @@ import aio_pika
 import msgpack
 from aio_pika import ExchangeType
 from aiogram import F, Router
-from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
@@ -15,15 +14,16 @@ from src.handlers.command.menu import menu
 from src.handlers.state.like_profile import LikedProfilesFlow
 from src.handlers.state.show_next_user import show_next_liked_user
 from src.logger import LOGGING_CONFIG, logger
-from src.metrics import SEND_MESSAGE, track_latency
+from aiogram.filters import StateFilter
+
 from src.storage.rabbit import channel_pool
+from src.metrics import track_latency, SEND_MESSAGE
 
 
 @router.callback_query(F.data == "my_matches")
-@track_latency("my_matches_handler")
+@track_latency('my_matches_handler')
 async def my_matches_handler(call: CallbackQuery, state: FSMContext):
     logging.config.dictConfig(LOGGING_CONFIG)
-    logger.info("ПОЯВИЛСЯ ЗАПРОС НА МЕТЧИ")
     user_id = call.from_user.id
 
     async with channel_pool.acquire() as channel:
@@ -43,7 +43,6 @@ async def my_matches_handler(call: CallbackQuery, state: FSMContext):
             "action": "get_my_matches",
         }
 
-        logger.info("ОТПРАВКА В ОЧЕРЕДЬ ЗАПРОСА НА МЕТЧИ")
 
         await exchange.publish(
             aio_pika.Message(msgpack.packb(body)), routing_key="user_messages"
@@ -60,7 +59,6 @@ async def my_matches_handler(call: CallbackQuery, state: FSMContext):
                 data = msgpack.unpackb(res.body)
 
                 matches = data.get("matches", [])
-                logger.info("ПРИНЯЛИ МЕТЧИ")
 
                 if matches:
                     await state.set_state(LikedProfilesFlow.viewing)
@@ -71,14 +69,13 @@ async def my_matches_handler(call: CallbackQuery, state: FSMContext):
                     await call.message.answer("У вас нет взаимных лайков.")
                     return
             except asyncio.QueueEmpty:
-                logger.info("ОЧЕРЕДЬ ПУСТАЯ, МЕТЧИ НЕ ПРИШЛИ")
                 await asyncio.sleep(1)
 
         await call.message.answer("Не удалось получить ваши мэтчи. Попробуйте позже.")
 
 
 @router.callback_query(F.data.startswith("open_conversation_"))
-@track_latency("open_conversation_handler")
+@track_latency('open_conversation_handler')
 async def open_conversation_handler(callback: CallbackQuery, state: FSMContext):
     conversation_id = int(callback.data.split("_")[-1])
     data = await state.get_data()
@@ -102,10 +99,7 @@ async def open_conversation_handler(callback: CallbackQuery, state: FSMContext):
 
     await callback.answer()
 
-
-@router.callback_query(
-    StateFilter(LikedProfilesFlow.viewing), F.data == "next_liked_user"
-)
-@track_latency("next_liked_user_handler")
+@router.callback_query(StateFilter(LikedProfilesFlow.viewing), F.data == "next_liked_user")
+@track_latency('next_liked_user_handler')
 async def next_liked_user_handler(callback: CallbackQuery, state: FSMContext):
     await show_next_liked_user(callback, state)

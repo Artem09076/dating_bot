@@ -2,19 +2,17 @@ import aio_pika
 import msgpack
 from aio_pika import ExchangeType
 from aiogram import F
-from aiogram.types import (CallbackQuery, InlineKeyboardButton,
-                           InlineKeyboardMarkup)
+from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 
 from config.settings import settings
 from src.handlers.callback.router import router
 from src.handlers.command.get_profile import get_profile
-from src.logger import LOGGING_CONFIG, logger
 from src.metrics import SEND_MESSAGE, track_latency
 from src.storage.rabbit import channel_pool
 
 
 @router.callback_query(F.data == "delete_form")
-@track_latency("start_delete_form")
+@track_latency('start_delete_form')
 async def start_delete_form(call: CallbackQuery):
     buttons = [
         [
@@ -32,7 +30,7 @@ async def start_delete_form(call: CallbackQuery):
 
 
 @router.callback_query(F.data == "final_delete")
-@track_latency("delete_form")
+@track_latency('delete_form')
 async def delete_form(call: CallbackQuery):
     user_id = call.from_user.id
     async with channel_pool.acquire() as channel:
@@ -55,6 +53,6 @@ async def delete_form(call: CallbackQuery):
 
 
 @router.callback_query(F.data == "return_form")
-@track_latency("return_get_profile")
+@track_latency('return_get_profile')
 async def return_get_profile(call: CallbackQuery):
     await call.message.delete()
