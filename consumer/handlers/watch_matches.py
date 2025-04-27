@@ -17,7 +17,6 @@ async def get_my_matches(body: dict):
     logging.config.dictConfig(LOGGING_CONFIG)
     user_id = body["id"]
     response_matches = []
-    logger.info("ЗАПРОС В БАЗУ НА МЕТЧИ")
 
     async with async_session() as db:
         try:
@@ -79,8 +78,8 @@ async def get_my_matches(body: dict):
             logger.info(e)
             response_matches = []
 
-    logger.info(f"ОТПРАВКА МЕТЧЕЙ В ОЧЕРЕДЬ {response_matches}")
-
+    logger.info("ОТПРАВКА МЕТЧЕЙ В ОЧЕРЕДЬ")
+    
     async with rabbit.channel_pool.acquire() as channel:
         exchange = await channel.declare_exchange(
             "user_form", ExchangeType.TOPIC, durable=True

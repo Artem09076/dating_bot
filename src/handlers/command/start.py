@@ -12,7 +12,8 @@ async def start(message: Message, state: FSMContext) -> None:
         [InlineKeyboardButton(text="Найти пару", callback_data="find_pair")],
         [InlineKeyboardButton(text="Мои мэтчи", callback_data="my_matches")],
         [InlineKeyboardButton(text="Создать анкету", callback_data="make_form")],
-        [InlineKeyboardButton(text="💖 Кто лайкнул меня", callback_data="liked_me")],
+        [InlineKeyboardButton(text="Кто лайкнул меня", callback_data="liked_me")],
+        [InlineKeyboardButton(text="Топ пользователей", callback_data="rating")],
     ]
     reply_markup = InlineKeyboardMarkup(inline_keyboard=main_menu)
     await message.answer(

@@ -156,11 +156,38 @@ async def handle_reaction(callback: CallbackQuery, state: FSMContext):
                 routing_key="user_messages",
             )
 
-        # await notify_liked_user(liked_user_id, callback.from_user.id)
+        await notify_liked_user_match_flow(callback, liked_user_id)
+
 
     await state.update_data(current_index=index + 1)
     logger.info("СЛЕДУЮЩИЙ!!!!!!!")
     await show_next_candidate(callback, state)
+
+
+async def notify_liked_user_match_flow(callback: CallbackQuery, target_user_id):
+    logger.info("МЫ В УВЕДОМЛЕНИИ О ЛАЙКЕ")
+
+    caption = f"Ваша анкета кому-то понравилась!"
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="Посмотреть сейчас", callback_data="liked_me"
+                ),
+                InlineKeyboardButton(
+                    text="Посмотрю позже", callback_data="stop_search"
+                ),
+            ]
+        ]
+    )
+
+    await callback.message.bot.send_message(
+        target_user_id, 
+        caption,  
+        reply_markup=keyboard
+    )
+    logger.info(f"УВЕДОМЛЕНИЕ ОТПРАВЛЕНО ПОЛЬЗОВАТЕЛЮ {target_user_id}")
 
 
 @router.callback_query(F.data == "stop_search")
@@ -170,8 +197,3 @@ async def stop_search(callback: CallbackQuery, state: FSMContext):
     await menu(callback.message)
     await state.clear()
     return
-
-
-# async def notify_liked_user(target_user_id, who_liked_id):
-#     logger.info("МЫ В УВЕДОМЛЕНИИ О ЛАЙКЕ")
-# await callback.message.answer("Вы поставили лайк этой анкете")

@@ -148,6 +148,8 @@ async def handle_reaction(callback: CallbackQuery, state: FSMContext):
                 "Вы взаимно поставили ❤️ этой анкете. Понравившийся пользователь появится в мэтчах"
             )
 
+            await notify_liked_user_liked_profiles(callback, liked_user_id)
+
         elif callback.data == "dislike_on_like":
             logger.info("ПОСТАВИЛИ ДИЗЛАЙК НА ЛАЙК")
             request_body = {
@@ -165,6 +167,32 @@ async def handle_reaction(callback: CallbackQuery, state: FSMContext):
     await state.update_data(current_index=index + 1)
     logger.info("СЛЕДУЮЩИЙ!!!!!!!")
     await show_next_liked_user(callback, state)
+
+
+async def notify_liked_user_liked_profiles(callback: CallbackQuery, target_user_id):
+    logger.info("МЫ В УВЕДОМЛЕНИИ О ЛАЙКЕ")
+
+    caption = f"Ваша анкета кому-то взаимно понравилась!"
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="Посмотреть сейчас", callback_data="my_matches"
+                ),
+                InlineKeyboardButton(
+                    text="Посмотрю позже", callback_data="stop_search"
+                ),
+            ]
+        ]
+    )
+
+    await callback.message.bot.send_message(
+        target_user_id,
+        caption,
+        reply_markup=keyboard
+    )
+    logger.info(f"УВЕДОМЛЕНИЕ ОТПРАВЛЕНО ПОЛЬЗОВАТЕЛЮ {target_user_id}")
 
 
 @router.callback_query(F.data == "stop_search", LikedProfilesFlow.viewing)
