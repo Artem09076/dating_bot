@@ -181,6 +181,7 @@ async def handle_reaction_on_tops(callback: CallbackQuery, state: FSMContext):
                 await callback.message.answer(
                     "Вы поставили ❤️ этой анкете."
                 )
+                await notify_liked_popular_user(callback, top_user_id)
 
             logger.info("ОТПРАВКА ЛАЙКОВ ТОПОВЫХ ПОЛЬЗОВАТЕЛЕЙ В ОЧЕРЕДЬ")
             await exchange.publish(
@@ -190,6 +191,32 @@ async def handle_reaction_on_tops(callback: CallbackQuery, state: FSMContext):
     await state.update_data(current_index=index + 1)
     logger.info("СЛЕДУЮЩИЙ!!!!!!!")
     await show_next_top_user(callback, state)
+
+
+async def notify_liked_popular_user(callback: CallbackQuery, target_user_id):
+    logger.info("МЫ В УВЕДОМЛЕНИИ О ЛАЙКЕ")
+
+    caption = f"Ваша анкета кому-то понравилась!"
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="Посмотреть сейчас", callback_data="liked_me"
+                ),
+                InlineKeyboardButton(
+                    text="Посмотрю позже", callback_data="stop_search"
+                ),
+            ]
+        ]
+    )
+
+    await callback.message.bot.send_message(
+        target_user_id,
+        caption,
+        reply_markup=keyboard
+    )
+    logger.info(f"УВЕДОМЛЕНИЕ ОТПРАВЛЕНО ПОЛЬЗОВАТЕЛЮ {target_user_id}")
 
 
 @router.callback_query(F.data == "stop_search",  PopularUser.viewing)
