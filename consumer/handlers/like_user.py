@@ -15,7 +15,6 @@ async def process_like_user(body: dict):
 
     async with async_session() as db:
         logging.config.dictConfig(LOGGING_CONFIG)
-        logger.info("ОБРАБОТКА ЛАЙКА", body)
         try:
             query = select(Like).where(
                 Like.from_user_id == to_user_id, Like.to_user_id == from_user_id
@@ -24,13 +23,11 @@ async def process_like_user(body: dict):
             existing_like = result.scalar_one_or_none()
 
             if existing_like:
-                logger.info("НАЙДЕН СУЩЕСТВУЮЩИЙ ЛАЙК, ОБНОВЛЯЕМ", body)
                 if existing_like.is_mutual == None and is_mutual == None:
                     existing_like.is_mutual = True
                 else:
                     existing_like.is_mutual = is_mutual
             else:
-                logger.info("СОЗДАЕМ НОВЫЙ ЛАЙК", body)
                 like = Like(
                     from_user_id=from_user_id,
                     to_user_id=to_user_id,
@@ -39,6 +36,5 @@ async def process_like_user(body: dict):
                 db.add(like)
 
             await db.commit()
-            logger.info("ИЗМЕНЕНИЯ СОХРАНЕНЫ", body)
         except SQLAlchemyError as err:
             logger.error(err)

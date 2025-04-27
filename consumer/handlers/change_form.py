@@ -11,7 +11,6 @@ from src.storage.rabbit import channel_pool
 
 async def change_form(body: dict):
     logging.config.dictConfig(LOGGING_CONFIG)
-    logger.info(f"Прием запроса: {body}")
     user_id = body.get("id")
 
     async with async_session() as db:
@@ -46,7 +45,6 @@ async def change_form(body: dict):
                     photo=body.get("photo", user.photo),
                 )
             )
-            logger.info(res)
             await db.commit()
         except Exception as err:
             await db.rollback()

@@ -16,7 +16,6 @@ from src.model.model import User
 async def get_profile(body: Dict[str, Any]) -> None:
     async with async_session() as db:
         logging.config.dictConfig(LOGGING_CONFIG)
-        logger.info("Прием запроса", body)
 
         user_id = body.get("id")
         result = await db.execute(select(User).where(User.id == int(user_id)))
@@ -31,4 +30,3 @@ async def get_profile(body: Dict[str, Any]) -> None:
             aio_pika.Message(msgpack.packb(response_body)),
             routing_key=settings.USER_QUEUE.format(user_id=user_id),
         )
-        logger.info(response_body)

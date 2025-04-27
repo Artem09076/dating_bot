@@ -20,7 +20,6 @@ async def find_candidates(body):
     try:
         async with async_session() as db:
             logging.config.dictConfig(LOGGING_CONFIG)
-            logger.info("ПРИЁМ ЗАПРОСА В БАЗУ ДАННЫХ FIND PAIR", body)
 
             result = await db.execute(
                 select(User)
@@ -32,10 +31,8 @@ async def find_candidates(body):
                 return
 
             if not user.combined_rating:
-                logger.info(f"У пользователя {user.id} нет комбинированного рейтинга!")
                 return
 
-            logger.info("ПРИНЯЛИ ЮЗЕРА ИЗ БД, ЩАС ФИЛЬТРЫ")
 
             filters = [
                 User.age >= user.preferred_age_min,
@@ -75,7 +72,6 @@ async def find_candidates(body):
 
             candidates_data = [c.to_dict() for c in candidates]
 
-            logger.info(f"КАНДИДАТЫ СФОРМИРОВАНЫ {candidates_data}")
     except Exception as err:
         logger.error(err)
         return
@@ -100,7 +96,6 @@ async def find_candidates(body):
             "candidates": candidates_data,
         }
 
-        logger.info("ОТПРАВКА КАНДИДАТОВ В ОЧЕРЕДЬ")
 
         await exchange.publish(
             Message(msgpack.packb(response_body)),

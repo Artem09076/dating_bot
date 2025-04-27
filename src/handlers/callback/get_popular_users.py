@@ -7,23 +7,26 @@ import msgpack
 from aio_pika import ExchangeType
 from aiogram import F
 from aiogram.fsm.context import FSMContext
-from aiogram.types import (BufferedInputFile, CallbackQuery,
-                           InlineKeyboardButton, InlineKeyboardMarkup)
+from aiogram.types import (
+    BufferedInputFile,
+    CallbackQuery,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+)
 
 from config.settings import settings
+from src.logger import LOGGING_CONFIG, logger
 from src.handlers.callback.router import router
 from src.handlers.command.menu import menu
 from src.handlers.state.match_flow import MatchFlow
 from src.handlers.state.popular_user import PopularUser
-from src.logger import LOGGING_CONFIG, logger
-from src.metrics import SEND_MESSAGE, track_latency
 from src.storage.minio import minio_client
 from src.storage.rabbit import channel_pool
 from src.templates.env import render
-
+from src.metrics import SEND_MESSAGE, track_latency
 
 @router.callback_query(F.data == "rating")
-@track_latency("find_top_users")
+@track_latency('find_top_users')
 async def find_top_users(call: CallbackQuery, state: FSMContext):
     user_id = call.from_user.id
 
@@ -65,7 +68,6 @@ async def find_top_users(call: CallbackQuery, state: FSMContext):
                 return
 
             except asyncio.QueueEmpty:
-                logger.info("ОЧЕРЕДЬ ПУСТАЯ!!!!!!")
                 await asyncio.sleep(1)
 
         await call.message.answer("⚠️ Не удалось получить анкеты. Попробуйте позже.")
@@ -86,12 +88,14 @@ async def show_next_top_user(callback: CallbackQuery, state: FSMContext):
 
     top_user = top_users[index]
     response = minio_client.get_object(
-        settings.MINIO_BUCKET.format(user_id=top_user["id"]), top_user["photo"]
+        settings.MINIO_BUCKET.format(
+            user_id=top_user["id"]), top_user["photo"]
     )
     photo_data = BytesIO(response.read())
     response.close()
     response.release_conn()
-    bufferd = BufferedInputFile(photo_data.read(), filename=top_user["photo"])
+    bufferd = BufferedInputFile(
+        photo_data.read(), filename=top_user["photo"])
 
     top_user.pop("photo", None)
 
@@ -101,31 +105,31 @@ async def show_next_top_user(callback: CallbackQuery, state: FSMContext):
 
     user_id = callback.from_user.id
 
-    logger.info("ПЕРЕД КНОПКАМИ")
 
-    logger.info(f"top_user_id: {top_user_id}, user_id: {user_id}")
+
 
     if str(top_user_id) == str(user_id):
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(text="Дальше", callback_data="next_top_user")],
+                [   
+                    InlineKeyboardButton(
+                    text="Дальше", callback_data="next_top_user")
+                ],
                 [
                     InlineKeyboardButton(
-                        text="❌ Закончить просмотр", callback_data="stop_search"
+                    text="❌ Закончить просмотр", callback_data="stop_search"
                     )
-                ],
+                ]
             ]
         )
 
-    else:
+    else: 
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(text="❤️ Лайк", callback_data="like_top_user")],
-                [
-                    InlineKeyboardButton(
-                        text="👎 Дизлайк", callback_data="dislike_top_user"
-                    )
-                ],
+                [InlineKeyboardButton(
+                    text="❤️ Лайк", callback_data="like_top_user")],
+                [InlineKeyboardButton(
+                    text="👎 Дизлайк", callback_data="dislike_top_user")],
                 [
                     InlineKeyboardButton(
                         text="❌ Закончить просмотр", callback_data="stop_search"
@@ -134,19 +138,15 @@ async def show_next_top_user(callback: CallbackQuery, state: FSMContext):
             ]
         )
 
-    logger.info("АНКЕТА СФОРМИРОВАНА И ОТПРАВЛЯЕТСЯ")
 
     await callback.message.answer_photo(
         photo=bufferd, caption=caption, reply_markup=keyboard
     )
 
 
-@router.callback_query(
-    F.data.in_(["like_top_user", "dislike_top_user"]), PopularUser.viewing
-)
-@track_latency("handle_reaction_on_tops")
+@router.callback_query(F.data.in_(["like_top_user", "dislike_top_user"]), PopularUser.viewing)
+@track_latency('handle_reaction_on_tops')
 async def handle_reaction_on_tops(callback: CallbackQuery, state: FSMContext):
-    logger.info("СТРЕМ ИЛИ НОРМ")
 
     data = await state.get_data()
     index = data.get("current_index", 0)
@@ -156,39 +156,35 @@ async def handle_reaction_on_tops(callback: CallbackQuery, state: FSMContext):
 
     user_id = callback.from_user.id
 
-    if callback.data == "dislike_top_user":
-        logger.info("ПОСТАВИЛИ ДИЗЛАЙК ТОПИКУ")
 
-    elif callback.data == "like_top_user":
+
+    if callback.data == "like_top_user":
         async with channel_pool.acquire() as channel:
             exchange = await channel.declare_exchange(
                 "user_form", ExchangeType.TOPIC, durable=True
             )
 
             if callback.data == "like_top_user":
-                logger.info("ПОСТАВИЛИ ЛАЙК ТОПОВОМУ ПОЛЬЗОВАТЕЛЮ")
                 request_body = {
                     "action": "like_user",
                     "from_user_id": user_id,
                     "to_user_id": top_user_id,
                     "is_mutual": None,
                 }
-                await callback.message.answer("Вы поставили ❤️ этой анкете.")
+                await callback.message.answer(
+                    "Вы поставили ❤️ этой анкете."
+                )
                 await notify_liked_popular_user(callback, top_user_id)
 
-            logger.info("ОТПРАВКА ЛАЙКОВ ТОПОВЫХ ПОЛЬЗОВАТЕЛЕЙ В ОЧЕРЕДЬ")
             await exchange.publish(
-                aio_pika.Message(msgpack.packb(request_body)),
-                routing_key="user_messages",
+                aio_pika.Message(msgpack.packb(request_body)), routing_key="user_messages"
             )
 
     await state.update_data(current_index=index + 1)
-    logger.info("СЛЕДУЮЩИЙ!!!!!!!")
     await show_next_top_user(callback, state)
 
 
 async def notify_liked_popular_user(callback: CallbackQuery, target_user_id):
-    logger.info("МЫ В УВЕДОМЛЕНИИ О ЛАЙКЕ")
 
     caption = f"Ваша анкета кому-то понравилась!"
 
@@ -206,26 +202,24 @@ async def notify_liked_popular_user(callback: CallbackQuery, target_user_id):
     )
 
     await callback.message.bot.send_message(
-        target_user_id, caption, reply_markup=keyboard
+        target_user_id,
+        caption,
+        reply_markup=keyboard
     )
-    logger.info(f"УВЕДОМЛЕНИЕ ОТПРАВЛЕНО ПОЛЬЗОВАТЕЛЮ {target_user_id}")
 
 
-@router.callback_query(F.data == "stop_search", PopularUser.viewing)
-@track_latency("stop_search")
+@router.callback_query(F.data == "stop_search",  PopularUser.viewing)
+@track_latency('stop_search')
 async def stop_search(callback: CallbackQuery, state: FSMContext):
-    logger.info("ВСЁ, ХОРОШ. НА ГЛАВНУЮ (из liked_profiles)")
     await callback.message.answer("📋 Возвращаю на главное меню...")
     await menu(callback.message)
     await state.clear()
 
 
-@router.callback_query(F.data == "next_top_user", PopularUser.viewing)
-@track_latency("next_top_user")
+@router.callback_query(F.data == "next_top_user",  PopularUser.viewing)
+@track_latency('next_top_user')
 async def next_top_user(callback: CallbackQuery, state: FSMContext):
-    logger.info("НАЖАЛИ КНОПКУ ДАЛЬШЕ")
     data = await state.get_data()
     index = data.get("current_index", 0)
     await state.update_data(current_index=index + 1)
-    logger.info("СЛЕДУЮЩИЙ!!!!!!!")
     await show_next_top_user(callback, state)

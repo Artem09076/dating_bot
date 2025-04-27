@@ -15,7 +15,6 @@ from src.logger import LOGGING_CONFIG, logger
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     logging.config.dictConfig(LOGGING_CONFIG)
-    logger.info("asdf")
     polling_task: asyncio.Task[None] | None = None
     wh_info = await bot.get_webhook_info()
     if settings.BOT_WEBHOOK_URL and wh_info != settings.BOT_WEBHOOK_URL:
@@ -38,7 +37,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 def create_app() -> FastAPI:
     app = FastAPI(docs_url="/swagger", lifespan=lifespan)
     app.include_router(router)
-    logger.info("asdf")
     return app
 
 

@@ -59,7 +59,6 @@ async def process_check_likes(body: dict):
             settings.USER_QUEUE.format(user_id=user_id),
         )
 
-        logger.info("ОТПРАВКА ЛАЙКНУВШИХ В ОЧЕРЕДЬ")
 
         await exchange.publish(
             Message(msgpack.packb(response)),
