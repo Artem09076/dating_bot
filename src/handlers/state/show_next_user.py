@@ -12,6 +12,7 @@ from src.storage.minio import minio_client
 from src.templates.env import render
 
 
+
 async def show_next_liked_user(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     likes = data.get("likes", [])
@@ -42,6 +43,14 @@ async def show_next_liked_user(callback: CallbackQuery, state: FSMContext):
     buttons = [
             [InlineKeyboardButton(text="✉️ Перейти к беседе", url=f'tg://user?id={liked_user.get('id')}')]
     ]
+
+    if index + 1 < len(likes):
+        buttons.append([
+            InlineKeyboardButton(
+                text="➡️ Далее",
+                callback_data="next_liked_user"
+            )
+        ])
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
     await callback.message.answer_photo(photo=bufferd, caption=caption, reply_markup=keyboard)
