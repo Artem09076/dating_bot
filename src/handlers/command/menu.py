@@ -16,8 +16,8 @@ async def menu(message: Message):
             InlineKeyboardButton(text="Создать анкету", callback_data="make_form"),
         ],
         [
-            InlineKeyboardButton(text="Рейтинг", callback_data="rating"),
-            InlineKeyboardButton(text="💖 Кто лайкнул меня", callback_data="liked_me"),
+            InlineKeyboardButton(text="Топ пользователей", callback_data="rating"),
+            InlineKeyboardButton(text="Кто лайкнул меня", callback_data="liked_me"),
         ],
     ]
     reply_markup = InlineKeyboardMarkup(inline_keyboard=main_menu)

@@ -5,4 +5,5 @@ from . import (
     liked_profiles,
     match_flow,
     watch_matches,
+    get_popular_users
 )
