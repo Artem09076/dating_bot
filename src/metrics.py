@@ -1,7 +1,8 @@
-from prometheus_client import Counter, Histogram
-from typing import Callable, Any
-from functools import wraps
 import time
+from functools import wraps
+from typing import Any, Callable
+
+from prometheus_client import Counter, Histogram
 
 BUCKETS = [
     0.2,

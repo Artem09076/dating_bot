@@ -17,14 +17,14 @@ from aiogram.types import (
 from config.settings import settings
 from src.handlers.command.router import router
 from src.logger import LOGGING_CONFIG, logger
+from src.metrics import SEND_MESSAGE, track_latency
 from src.storage.minio import minio_client
 from src.storage.rabbit import channel_pool
 from src.templates.env import render
-from src.metrics import SEND_MESSAGE
-from src.metrics import track_latency
+
 
 @router.message(Command("my_profile"))
-@track_latency('get_profile')
+@track_latency("get_profile")
 async def get_profile(message: Message) -> None:
     logging.config.dictConfig(LOGGING_CONFIG)
     user_id = message.from_user.id
@@ -57,9 +57,8 @@ async def get_profile(message: Message) -> None:
                             text="Изменить анкету", callback_data="change_form"
                         ),
                         InlineKeyboardButton(
-                            text='Удалить анкету', callback_data='delete_form'
-                        )
-
+                            text="Удалить анкету", callback_data="delete_form"
+                        ),
                     ]
                 ]
                 keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)

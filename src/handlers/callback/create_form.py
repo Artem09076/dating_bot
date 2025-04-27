@@ -18,9 +18,9 @@ from config.settings import settings
 from src.handlers.callback.router import router
 from src.handlers.command.gender import gender_keyboard
 from src.handlers.state.made_form import ProfileForm
+from src.metrics import NEW_PROFILES, SEND_MESSAGE
 from src.storage.minio import minio_client
 from src.storage.rabbit import channel_pool
-from src.metrics import NEW_PROFILES, SEND_MESSAGE
 
 
 @router.callback_query(F.data == "make_form")
@@ -88,8 +88,7 @@ async def process_interests(message: Message, state: FSMContext) -> None:
     interest = message.text
     pattern = r"^\s*[\w\s\-]+(?:\s*,\s*[\w\s\-]+)+\s*$"
     if interest and re.match(pattern, interest):
-        interests_list = [i.strip() for i in interest.split(",") if i.strip()]
-        await state.update_data(interests=interests_list)
+        await state.update_data(interests=interest)
         await message.answer("Отправь своё фото:")
         await state.set_state(ProfileForm.photo)
     else:

@@ -1,25 +1,27 @@
 import asyncio
+import logging.config
 from io import BytesIO
+
 import aio_pika
 import msgpack
-from aiogram import F
-from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 from aio_pika import ExchangeType
-from src.handlers.state.match_flow import MatchFlow
-from src.storage.rabbit import channel_pool
-from config.settings import settings
-from src.handlers.callback.router import router
+from aiogram import F
 from aiogram.fsm.context import FSMContext
-from src.handlers.command.menu import menu
-from consumer.logger import LOGGING_CONFIG, logger
-import logging.config
-from src.templates.env import render
-from src.storage.minio import minio_client
 from aiogram.types import (
     BufferedInputFile,
+    CallbackQuery,
     InlineKeyboardButton,
-    InlineKeyboardMarkup
+    InlineKeyboardMarkup,
 )
+
+from config.settings import settings
+from consumer.logger import LOGGING_CONFIG, logger
+from src.handlers.callback.router import router
+from src.handlers.command.menu import menu
+from src.handlers.state.match_flow import MatchFlow
+from src.storage.minio import minio_client
+from src.storage.rabbit import channel_pool
+from src.templates.env import render
 
 
 @router.callback_query(F.data == "find_pair")
@@ -38,18 +40,13 @@ async def find_pair_handler(call: CallbackQuery, state: FSMContext):
 
         await user_queue.bind(exchange, routing_key=queue_name)
 
-        request_body = {
-            "user_id": call.from_user.id,
-            "action": "find_pair"
-        }
+        request_body = {"user_id": call.from_user.id, "action": "find_pair"}
 
         logger.info("ЗАПРОС ПОШЕЛ В USER_MESSAGES")
 
         await exchange.publish(
-            aio_pika.Message(msgpack.packb(request_body)),
-            routing_key="user_messages"
+            aio_pika.Message(msgpack.packb(request_body)), routing_key="user_messages"
         )
-
 
         retries = 3
         for _ in range(retries):
@@ -58,7 +55,7 @@ async def find_pair_handler(call: CallbackQuery, state: FSMContext):
                 await res.ack()
                 data = msgpack.unpackb(res.body)
                 candidates = data.get("candidates", [])
-                logger.info("ПРИНЯЛИ КАНДИДАТОВ")
+                logger.info(f"ПРИНЯЛИ КАНДИДАТОВ : {data}")
                 if not candidates:
                     await call.message.answer("😕 Подходящих анкет не найдено.")
                     return
@@ -90,29 +87,34 @@ async def show_next_candidate(call: CallbackQuery, state: FSMContext):
     candidate = candidates[index]
 
     response = minio_client.get_object(
-        settings.MINIO_BUCKET.format(
-            user_id=candidate['id']), candidate["photo"]
+        settings.MINIO_BUCKET.format(user_id=candidate["id"]), candidate["photo"]
     )
     photo_data = BytesIO(response.read())
     response.close()
     response.release_conn()
-    bufferd = BufferedInputFile(
-        photo_data.read(), filename=candidate["photo"]
-    )
-    
+    bufferd = BufferedInputFile(photo_data.read(), filename=candidate["photo"])
+
     candidate.pop("photo", None)
 
     caption = render("candidate_card.jinja2", **candidate)
 
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="❤️ Лайк", callback_data="like")],
-        [InlineKeyboardButton(text="👎 Дизлайк", callback_data="dislike")],
-        [InlineKeyboardButton(text="❌ Закончить просмотр", callback_data="stop_search")]
-    ])
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="❤️ Лайк", callback_data="like")],
+            [InlineKeyboardButton(text="👎 Дизлайк", callback_data="dislike")],
+            [
+                InlineKeyboardButton(
+                    text="❌ Закончить просмотр", callback_data="stop_search"
+                )
+            ],
+        ]
+    )
 
     logger.info("АНКЕТА СФОРМИРОВАНА И ОТПРАВЛЯЕТСЯ")
 
-    await call.message.answer_photo(photo=bufferd, caption=caption, reply_markup=keyboard)
+    await call.message.answer_photo(
+        photo=bufferd, caption=caption, reply_markup=keyboard
+    )
 
 
 @router.callback_query(F.data.in_(["like", "dislike"]), MatchFlow.viewing)
@@ -143,18 +145,18 @@ async def handle_reaction(callback: CallbackQuery, state: FSMContext):
                 "action": "like_user",
                 "from_user_id": user_id,
                 "to_user_id": liked_user_id,
-                'is_mutual': None
+                "is_mutual": None,
             }
 
             logger.info("ОТПРАВКА ЛАЙКА В ОЧЕРЕДЬ")
             await callback.message.answer("Вы поставили ❤️ этой анкете")
 
             await exchange.publish(
-                aio_pika.Message(
-                    msgpack.packb(request_body)
-                ),
-                routing_key="user_messages"
+                aio_pika.Message(msgpack.packb(request_body)),
+                routing_key="user_messages",
             )
+
+        # await notify_liked_user(liked_user_id, callback.from_user.id)
 
 
     await state.update_data(current_index=index + 1)
@@ -169,3 +171,8 @@ async def stop_search(callback: CallbackQuery, state: FSMContext):
     await menu(callback.message)
     await state.clear()
     return
+
+# async def notify_liked_user(target_user_id, who_liked_id):
+#     logger.info("МЫ В УВЕДОМЛЕНИИ О ЛАЙКЕ")
+# await callback.message.answer("Вы поставили лайк этой анкете")
+

@@ -4,37 +4,45 @@ import aio_pika
 import msgpack
 from aio_pika import ExchangeType
 from aiogram import F
-from aiogram.types import (
-    CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton,
-    Message, KeyboardButton, ReplyKeyboardMarkup
-)
 from aiogram.fsm.context import FSMContext
+from aiogram.types import (
+    CallbackQuery,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    KeyboardButton,
+    Message,
+    ReplyKeyboardMarkup,
+)
 
+from config.settings import settings
 from src.handlers.callback.router import router
+from src.handlers.command.gender import gender_keyboard
 from src.handlers.state.change_form import EditProfileForm
 from src.storage.minio import minio_client
 from src.storage.rabbit import channel_pool
-from src.handlers.command.gender import gender_keyboard
-from config.settings import settings
 
-
-edit_menu_keyboard = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text="✏️ Имя", callback_data="edit_name")],
-    [InlineKeyboardButton(text="🎂 Возраст", callback_data="edit_age")],
-    [InlineKeyboardButton(text="♂️♀️ Пол", callback_data="edit_gender")],
-    [InlineKeyboardButton(text="📍 Город", callback_data="edit_city")],
-    [InlineKeyboardButton(text="🎯 Интересы", callback_data="edit_interests")],
-    [InlineKeyboardButton(text="🖼️ Фото", callback_data="edit_photo")],
-    [InlineKeyboardButton(text="🔍 Пожелания к партнёру", callback_data="edit_preferences")],
-    [InlineKeyboardButton(text="✅ Завершить", callback_data="finish_editing")]
-])
+edit_menu_keyboard = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text="✏️ Имя", callback_data="edit_name")],
+        [InlineKeyboardButton(text="🎂 Возраст", callback_data="edit_age")],
+        [InlineKeyboardButton(text="♂️♀️ Пол", callback_data="edit_gender")],
+        [InlineKeyboardButton(text="📍 Город", callback_data="edit_city")],
+        [InlineKeyboardButton(text="🎯 Интересы", callback_data="edit_interests")],
+        [InlineKeyboardButton(text="🖼️ Фото", callback_data="edit_photo")],
+        [
+            InlineKeyboardButton(
+                text="🔍 Пожелания к партнёру", callback_data="edit_preferences"
+            )
+        ],
+        [InlineKeyboardButton(text="✅ Завершить", callback_data="finish_editing")],
+    ]
+)
 
 
 @router.callback_query(F.data == "change_form")
 async def start_editing(call: CallbackQuery, state: FSMContext):
     await call.message.answer(
-        "Что вы хотите изменить?",
-        reply_markup=edit_menu_keyboard
+        "Что вы хотите изменить?", reply_markup=edit_menu_keyboard
     )
     await state.set_state(EditProfileForm.choose_field)
 
@@ -50,11 +58,13 @@ async def choose_field_to_edit(call: CallbackQuery, state: FSMContext):
         await call.message.answer("Введите новый возраст:")
         await state.set_state(EditProfileForm.age)
     elif data == "edit_gender":
-        gender_keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="Мужской", callback_data="gender_male")],
-            [InlineKeyboardButton(text="Женский", callback_data="gender_female")],
-            [InlineKeyboardButton(text="Другое", callback_data="gender_other")]
-        ])
+        gender_keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="Мужской", callback_data="gender_male")],
+                [InlineKeyboardButton(text="Женский", callback_data="gender_female")],
+                [InlineKeyboardButton(text="Другое", callback_data="gender_other")],
+            ]
+        )
         await call.message.answer("Выберите новый пол:", reply_markup=gender_keyboard)
         await state.set_state(EditProfileForm.gender)
     elif data == "edit_city":
@@ -96,14 +106,13 @@ async def handle_gender_selection(callback: CallbackQuery, state: FSMContext):
         "gender_other": "other",
     }
     gender = gender_map.get(callback.data)
-    
+
     if gender:
         await state.update_data(gender=gender)
         await callback.message.answer("✅ Пол обновлён!")
         await state.set_state(EditProfileForm.confirm_changes)
     else:
         await callback.answer("Некорректный выбор", show_alert=True)
-
 
 
 @router.message(EditProfileForm.city)
@@ -155,7 +164,9 @@ async def edit_preferred_gender(message: Message, state: FSMContext):
         await message.answer("Укажите минимальный возраст партнера:")
         await state.set_state(EditProfileForm.preferred_age_min)
     else:
-        await message.answer("Некорректный выбор. Пожалуйста, выберите из предложенных вариантов.")
+        await message.answer(
+            "Некорректный выбор. Пожалуйста, выберите из предложенных вариантов."
+        )
 
 
 @router.message(EditProfileForm.preferred_age_min)
@@ -185,15 +196,17 @@ async def edit_preferred_city(message: Message, state: FSMContext):
 
 
 async def back_to_edit_menu(message: Message, state: FSMContext):
-    await message.answer("Выберите, что хотите изменить еще:", reply_markup=edit_menu_keyboard)
+    await message.answer(
+        "Выберите, что хотите изменить еще:", reply_markup=edit_menu_keyboard
+    )
     await state.set_state(EditProfileForm.choose_field)
 
 
 async def save_updated_profile(call: CallbackQuery, state: FSMContext):
     async with channel_pool.acquire() as channel:
         exchange = await channel.declare_exchange(
-                "user_form", ExchangeType.TOPIC, durable=True
-            )
+            "user_form", ExchangeType.TOPIC, durable=True
+        )
 
         user_queue = await channel.declare_queue("user_messages", durable=True)
 
@@ -204,7 +217,9 @@ async def save_updated_profile(call: CallbackQuery, state: FSMContext):
             "id": call.from_user.id,
             "action": "update_form",
         }
-        await exchange.publish(aio_pika.Message(msgpack.packb(body)), routing_key="user_messages")
+        await exchange.publish(
+            aio_pika.Message(msgpack.packb(body)), routing_key="user_messages"
+        )
 
         await call.answer("Данные сохранены")
         await call.message.edit_reply_markup(reply_markup=None)

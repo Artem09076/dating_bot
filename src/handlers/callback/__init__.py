@@ -1,2 +1,8 @@
-from . import create_form, match_flow, change_form, liked_profiles, delete_form, change_form, watch_matches
-
+from . import (
+    change_form,
+    create_form,
+    delete_form,
+    liked_profiles,
+    match_flow,
+    watch_matches,
+)

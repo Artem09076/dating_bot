@@ -1,8 +1,8 @@
-"""Add is_mutual column to likes table
+"""add on_delete
 
-Revision ID: 998090292a7f
-Revises: 1c821254e678
-Create Date: 2025-04-18 10:35:30.037252
+Revision ID: aa478a3b703c
+Revises: 998090292a7f
+Create Date: 2025-04-22 22:31:07.139720
 
 """
 
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "998090292a7f"
-down_revision: Union[str, None] = "1c821254e678"
+revision: str = "aa478a3b703c"
+down_revision: Union[str, None] = "998090292a7f"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -31,6 +31,7 @@ def upgrade() -> None:
         ["id"],
         source_schema="public",
         referent_schema="public",
+        ondelete="CASCADE",
     )
     op.drop_constraint(
         "fk_combined_ratings_user_id_user", "combined_ratings", type_="foreignkey"
@@ -43,6 +44,7 @@ def upgrade() -> None:
         ["id"],
         source_schema="public",
         referent_schema="public",
+        ondelete="CASCADE",
     )
     op.drop_constraint(
         "fk_conversation_user1_id_user", "conversation", type_="foreignkey"
@@ -58,6 +60,7 @@ def upgrade() -> None:
         ["id"],
         source_schema="public",
         referent_schema="public",
+        ondelete="CASCADE",
     )
     op.create_foreign_key(
         op.f("fk_conversation_user1_id_user"),
@@ -67,10 +70,10 @@ def upgrade() -> None:
         ["id"],
         source_schema="public",
         referent_schema="public",
+        ondelete="CASCADE",
     )
-    op.add_column("likes", sa.Column("is_mutual", sa.Boolean(), nullable=True))
-    op.drop_constraint("fk_likes_to_user_id_user", "likes", type_="foreignkey")
     op.drop_constraint("fk_likes_from_user_id_user", "likes", type_="foreignkey")
+    op.drop_constraint("fk_likes_to_user_id_user", "likes", type_="foreignkey")
     op.create_foreign_key(
         op.f("fk_likes_to_user_id_user"),
         "likes",
@@ -79,6 +82,7 @@ def upgrade() -> None:
         ["id"],
         source_schema="public",
         referent_schema="public",
+        ondelete="CASCADE",
     )
     op.create_foreign_key(
         op.f("fk_likes_from_user_id_user"),
@@ -88,6 +92,7 @@ def upgrade() -> None:
         ["id"],
         source_schema="public",
         referent_schema="public",
+        ondelete="CASCADE",
     )
     op.drop_constraint(
         "fk_primary_ratings_user_id_user", "primary_ratings", type_="foreignkey"
@@ -100,6 +105,7 @@ def upgrade() -> None:
         ["id"],
         source_schema="public",
         referent_schema="public",
+        ondelete="CASCADE",
     )
     op.drop_constraint("fk_user_invited_by_user_id_user", "user", type_="foreignkey")
     op.create_foreign_key(
@@ -149,12 +155,11 @@ def downgrade() -> None:
         op.f("fk_likes_to_user_id_user"), "likes", schema="public", type_="foreignkey"
     )
     op.create_foreign_key(
-        "fk_likes_from_user_id_user", "likes", "user", ["from_user_id"], ["id"]
-    )
-    op.create_foreign_key(
         "fk_likes_to_user_id_user", "likes", "user", ["to_user_id"], ["id"]
     )
-    op.drop_column("likes", "is_mutual")
+    op.create_foreign_key(
+        "fk_likes_from_user_id_user", "likes", "user", ["from_user_id"], ["id"]
+    )
     op.drop_constraint(
         op.f("fk_conversation_user1_id_user"),
         "conversation",

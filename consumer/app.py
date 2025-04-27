@@ -4,8 +4,9 @@ import msgpack
 
 from consumer.handlers.event_distribution import handle_event_distribution
 from consumer.logger import LOGGING_CONFIG, logger
-from consumer.storage import rabbit
 from consumer.metrics import RECEIVE_MESSAGE
+from consumer.storage import rabbit
+
 
 async def main() -> None:
     logging.config.dictConfig(LOGGING_CONFIG)
