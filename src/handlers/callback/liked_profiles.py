@@ -7,24 +7,22 @@ import msgpack
 from aio_pika import ExchangeType
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import (
-    BufferedInputFile,
-    CallbackQuery,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-)
+from aiogram.types import (BufferedInputFile, CallbackQuery,
+                           InlineKeyboardButton, InlineKeyboardMarkup)
 
 from config.settings import settings
-from consumer.logger import LOGGING_CONFIG, logger
 from src.handlers.callback.router import router
 from src.handlers.command.menu import menu
 from src.handlers.state.like_profile import LikedProfilesFlow
+from src.logger import LOGGING_CONFIG, logger
+from src.metrics import SEND_MESSAGE, track_latency
 from src.storage.minio import minio_client
 from src.storage.rabbit import channel_pool
 from src.templates.env import render
 
 
 @router.callback_query(lambda c: c.data == "liked_me")
+@track_latency("liked_me_handler")
 async def liked_me_handler(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
 
@@ -43,6 +41,7 @@ async def liked_me_handler(callback: CallbackQuery, state: FSMContext):
         await exchange.publish(
             aio_pika.Message(msgpack.packb(request_body)), routing_key="user_messages"
         )
+        SEND_MESSAGE.inc()
 
         await callback.message.answer("⏳ Проверяю, кто поставил вам лайк...")
 
@@ -120,6 +119,7 @@ async def show_next_liked_user(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(
     F.data.in_(["like_on_like", "dislike_on_like"]), LikedProfilesFlow.viewing
 )
+@track_latency("handle_reaction")
 async def handle_reaction(callback: CallbackQuery, state: FSMContext):
     logger.info("СТРЕМ ИЛИ НОРМ")
 
@@ -163,7 +163,7 @@ async def handle_reaction(callback: CallbackQuery, state: FSMContext):
         await exchange.publish(
             aio_pika.Message(msgpack.packb(request_body)), routing_key="user_messages"
         )
-
+        SEND_MESSAGE.inc()
     await state.update_data(current_index=index + 1)
     logger.info("СЛЕДУЮЩИЙ!!!!!!!")
     await show_next_liked_user(callback, state)
@@ -188,14 +188,13 @@ async def notify_liked_user_liked_profiles(callback: CallbackQuery, target_user_
     )
 
     await callback.message.bot.send_message(
-        target_user_id,
-        caption,
-        reply_markup=keyboard
+        target_user_id, caption, reply_markup=keyboard
     )
     logger.info(f"УВЕДОМЛЕНИЕ ОТПРАВЛЕНО ПОЛЬЗОВАТЕЛЮ {target_user_id}")
 
 
 @router.callback_query(F.data == "stop_search", LikedProfilesFlow.viewing)
+@track_latency("stop_search")
 async def stop_search(callback: CallbackQuery, state: FSMContext):
     logger.info("ВСЁ, ХОРОШ. НА ГЛАВНУЮ (из liked_profiles)")
     await callback.message.answer("📋 Возвращаю на главное меню...")

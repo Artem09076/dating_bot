@@ -29,5 +29,5 @@ async def handle_event_distribution(body: Dict[str, Any]) -> None:
             await change_form(body)
         case "get_my_matches":
             await get_my_matches(body)
-        case 'rating':
+        case "rating":
             await get_top_popular_users(body)

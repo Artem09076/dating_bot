@@ -15,13 +15,8 @@ from script.init_db import migrate
 from src import bot
 from src.storage import db, rabbit, redis
 from src.storage.db import engine, get_db
-from tests.mocking.rabbit import (
-    MockChannel,
-    MockChannelPool,
-    MockExchange,
-    MockExchangeMessage,
-    MockQueue,
-)
+from tests.mocking.rabbit import (MockChannel, MockChannelPool, MockExchange,
+                                  MockExchangeMessage, MockQueue)
 from tests.mocking.redis import MockRedis
 
 

@@ -3,10 +3,12 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from src.handlers.command.router import router
+from src.metrics import track_latency
 from src.templates.env import render
 
 
 @router.message(Command("start"))
+@track_latency("start_command")
 async def start(message: Message, state: FSMContext) -> None:
     main_menu = [
         [InlineKeyboardButton(text="Найти пару", callback_data="find_pair")],

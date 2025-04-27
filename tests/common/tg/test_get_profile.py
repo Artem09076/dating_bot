@@ -1,12 +1,8 @@
 import uuid
 
 import pytest
-from aiogram.types import (
-    BufferedInputFile,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    User,
-)
+from aiogram.types import (BufferedInputFile, InlineKeyboardButton,
+                           InlineKeyboardMarkup, User)
 
 from src.handlers.command.get_profile import get_profile
 from src.templates.env import render

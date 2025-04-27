@@ -5,6 +5,7 @@ import aio_pika
 import msgpack
 from aio_pika import ExchangeType
 from aiogram import F, Router
+from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
@@ -14,12 +15,12 @@ from src.handlers.command.menu import menu
 from src.handlers.state.like_profile import LikedProfilesFlow
 from src.handlers.state.show_next_user import show_next_liked_user
 from src.logger import LOGGING_CONFIG, logger
-from aiogram.filters import StateFilter
-
+from src.metrics import SEND_MESSAGE, track_latency
 from src.storage.rabbit import channel_pool
 
 
 @router.callback_query(F.data == "my_matches")
+@track_latency("my_matches_handler")
 async def my_matches_handler(call: CallbackQuery, state: FSMContext):
     logging.config.dictConfig(LOGGING_CONFIG)
     logger.info("ПОЯВИЛСЯ ЗАПРОС НА МЕТЧИ")
@@ -47,6 +48,7 @@ async def my_matches_handler(call: CallbackQuery, state: FSMContext):
         await exchange.publish(
             aio_pika.Message(msgpack.packb(body)), routing_key="user_messages"
         )
+        SEND_MESSAGE.inc()
 
         await call.message.answer("Проверяю ваши мэтчи...")
 
@@ -76,6 +78,7 @@ async def my_matches_handler(call: CallbackQuery, state: FSMContext):
 
 
 @router.callback_query(F.data.startswith("open_conversation_"))
+@track_latency("open_conversation_handler")
 async def open_conversation_handler(callback: CallbackQuery, state: FSMContext):
     conversation_id = int(callback.data.split("_")[-1])
     data = await state.get_data()
@@ -99,6 +102,10 @@ async def open_conversation_handler(callback: CallbackQuery, state: FSMContext):
 
     await callback.answer()
 
-@router.callback_query(StateFilter(LikedProfilesFlow.viewing), F.data == "next_liked_user")
+
+@router.callback_query(
+    StateFilter(LikedProfilesFlow.viewing), F.data == "next_liked_user"
+)
+@track_latency("next_liked_user_handler")
 async def next_liked_user_handler(callback: CallbackQuery, state: FSMContext):
     await show_next_liked_user(callback, state)

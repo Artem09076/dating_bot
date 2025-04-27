@@ -12,7 +12,6 @@ from src.storage.minio import minio_client
 from src.templates.env import render
 
 
-
 async def show_next_liked_user(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     likes = data.get("likes", [])

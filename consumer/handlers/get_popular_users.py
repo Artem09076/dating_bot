@@ -1,15 +1,15 @@
 import logging
-from sqlalchemy import select, desc
-from sqlalchemy.orm import selectinload
-from consumer.storage.db import async_session
-from src.model.model import User, CombinedRating
-from consumer.logger import LOGGING_CONFIG, logger
-from src.storage.rabbit import channel_pool
+
 import msgpack
 from aio_pika import ExchangeType, Message
-from sqlalchemy import select
-from config.settings import settings
+from sqlalchemy import desc, select
+from sqlalchemy.orm import selectinload
 
+from config.settings import settings
+from consumer.logger import LOGGING_CONFIG, logger
+from consumer.storage.db import async_session
+from src.model.model import CombinedRating, User
+from src.storage.rabbit import channel_pool
 
 
 async def get_top_popular_users(body):
@@ -19,7 +19,8 @@ async def get_top_popular_users(body):
         async with async_session() as db:
             logging.config.dictConfig(LOGGING_CONFIG)
             logger.info(
-                "ПРИЁМ ЗАПРОСА НА ПОЛУЧЕНИЕ ТОПА ПОПУЛЯРНЫХ ПОЛЬЗОВАТЕЛЕЙ", body)
+                "ПРИЁМ ЗАПРОСА НА ПОЛУЧЕНИЕ ТОПА ПОПУЛЯРНЫХ ПОЛЬЗОВАТЕЛЕЙ", body
+            )
 
             result = await db.execute(
                 select(User)
@@ -41,10 +42,9 @@ async def get_top_popular_users(body):
             response = {"user_id": user_id, "top_users": candidates_data}
 
     except Exception as err:
-        logger.error(
-            f"Ошибка при получении топа популярных пользователей: {err}")
+        logger.error(f"Ошибка при получении топа популярных пользователей: {err}")
         return []
-    
+
     async with channel_pool.acquire() as channel:
         exchange = await channel.declare_exchange(
             "user_form", ExchangeType.TOPIC, durable=True

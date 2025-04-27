@@ -2,10 +2,12 @@ from aiogram.filters import Command
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from src.handlers.command.router import router
+from src.metrics import track_latency
 from src.templates.env import render
 
 
 @router.message(Command("menu"))
+@track_latency("menu_command")
 async def menu(message: Message):
     main_menu = [
         [

@@ -7,16 +7,11 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config.settings import settings
-from consumer.logger import logger, LOGGING_CONFIG
+from consumer.logger import LOGGING_CONFIG, logger
 from consumer.storage.db import async_session
-from src.model.model import (
-    BehaviorRating,
-    CombinedRating,
-    Conversation,
-    Like,
-    PrimaryRating,
-    User,
-)
+from src.model.model import (BehaviorRating, CombinedRating, Conversation,
+                             Like, PrimaryRating, User)
+
 app = Celery(
     "tasks", broker=settings.celery_broker_url, backend=settings.celery_result_backend
 )
@@ -33,7 +28,6 @@ async def calculate_user_rating(user_id: int, db: AsyncSession):
     logging.config.dictConfig(LOGGING_CONFIG)
     user = await db.get(User, user_id)
     if not user:
-        logger.error(f"Пользователь с id {user_id} не найден.")
         return
 
     completeness_score = 1.0 if user.profile_filled else 0.5
@@ -110,7 +104,6 @@ async def calculate_user_rating(user_id: int, db: AsyncSession):
         combined_rating = CombinedRating(user_id=user.id)
     combined_rating.score = combined_score
     db.add(combined_rating)
-    logger.info('asdf')
 
     await db.commit()
 
@@ -121,11 +114,13 @@ async def recalculate_all_users():
         user_ids = [row[0] for row in users.fetchall()]
 
         for user_id in user_ids:
-                async with async_session() as db:
-                    try:
-                        await calculate_user_rating(user_id, db)
-                    except Exception as e:
-                        logger.error(f"Ошибка при пересчете рейтинга для user_id={user_id}: {e}")
+            async with async_session() as db:
+                try:
+                    await calculate_user_rating(user_id, db)
+                except Exception as e:
+                    logger.error(
+                        f"Ошибка при пересчете рейтинга для user_id={user_id}: {e}"
+                    )
 
 
 @app.task()

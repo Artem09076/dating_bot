@@ -7,12 +7,8 @@ import msgpack
 from aio_pika import ExchangeType
 from aio_pika.exceptions import QueueEmpty
 from aiogram.filters import Command
-from aiogram.types import (
-    BufferedInputFile,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    Message,
-)
+from aiogram.types import (BufferedInputFile, InlineKeyboardButton,
+                           InlineKeyboardMarkup, Message)
 
 from config.settings import settings
 from src.handlers.command.router import router

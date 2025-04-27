@@ -12,7 +12,6 @@ from script.calculate_ratings import calculate_user_rating
 async def create_form(body: Dict[str, Any]) -> None:
     async with async_session() as db:
         logging.config.dictConfig(LOGGING_CONFIG)
-        logger.info("Прием запроса", body)
         try:
             user = User(
                 id=body.get("id"),

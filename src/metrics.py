@@ -42,7 +42,6 @@ def track_latency(method_name: str):
     return decorator
 
 
-NEW_PROFILES = Counter("new_profile_totoal", "считает количество созданных анкет")
 SEND_MESSAGE = Counter(
     "bot_messages_sent",
     "Отправленные сообщения в очередь",

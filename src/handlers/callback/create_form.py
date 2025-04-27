@@ -5,25 +5,30 @@ import msgpack
 from aio_pika import ExchangeType
 from aiogram import F
 from aiogram.fsm.context import FSMContext
-from aiogram.types import (
-    CallbackQuery,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    KeyboardButton,
-    Message,
-    ReplyKeyboardMarkup,
-)
+from aiogram.types import (CallbackQuery, InlineKeyboardButton,
+                           InlineKeyboardMarkup, KeyboardButton, Message,
+                           ReplyKeyboardMarkup)
 
 from config.settings import settings
 from src.handlers.callback.router import router
-from src.handlers.command.gender import gender_keyboard
 from src.handlers.state.made_form import ProfileForm
-from src.metrics import NEW_PROFILES, SEND_MESSAGE
+from src.metrics import SEND_MESSAGE, track_latency
 from src.storage.minio import minio_client
 from src.storage.rabbit import channel_pool
 
+gender_keyboard = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [
+            InlineKeyboardButton(text="Мужской", callback_data="gender_male"),
+            InlineKeyboardButton(text="Женский", callback_data="gender_female"),
+        ],
+        [InlineKeyboardButton(text="Другое", callback_data="gender_other")],
+    ]
+)
+
 
 @router.callback_query(F.data == "make_form")
+@track_latency("start_profile_creation")
 async def start_profile_creation(call: CallbackQuery, state: FSMContext) -> None:
     await state.clear()
     if isinstance(call.message, Message):
@@ -32,6 +37,7 @@ async def start_profile_creation(call: CallbackQuery, state: FSMContext) -> None
 
 
 @router.message(F.text, ProfileForm.name)
+@track_latency("process_name")
 async def process_name(message: Message, state: FSMContext) -> None:
     if message.text and not message.text.isdigit():
         await state.update_data(name=message.text)
@@ -44,6 +50,7 @@ async def process_name(message: Message, state: FSMContext) -> None:
 
 
 @router.message(F.text, ProfileForm.age)
+@track_latency("process_age")
 async def process_age(message: Message, state: FSMContext) -> None:
     if message.text.isdigit():
         await state.update_data(age=int(message.text))
@@ -54,6 +61,7 @@ async def process_age(message: Message, state: FSMContext) -> None:
 
 
 @router.callback_query(F.data.startswith("gender_"), ProfileForm.gender)
+@track_latency("process_gender")
 async def process_gender(callback: CallbackQuery, state: FSMContext) -> None:
     gender_map = {
         "gender_male": "Мужской",
@@ -72,6 +80,7 @@ async def process_gender(callback: CallbackQuery, state: FSMContext) -> None:
 
 
 @router.message(F.text, ProfileForm.city)
+@track_latency("process_city")
 async def process_city(message: Message, state: FSMContext):
     if message.text and not message.text.isdigit():
         await state.update_data(city=message.text.lower())
@@ -84,6 +93,7 @@ async def process_city(message: Message, state: FSMContext):
 
 
 @router.message(F.text, ProfileForm.interests)
+@track_latency("process_interests")
 async def process_interests(message: Message, state: FSMContext) -> None:
     interest = message.text
     pattern = r"^\s*[\w\s\-]+(?:\s*,\s*[\w\s\-]+)+\s*$"
@@ -96,6 +106,7 @@ async def process_interests(message: Message, state: FSMContext) -> None:
 
 
 @router.message(F.photo, ProfileForm.photo)
+@track_latency("process_photo")
 async def process_photo(message: Message, state: FSMContext) -> None:
     if message.photo:
         file_id = message.photo[-1].file_id
@@ -132,6 +143,7 @@ async def process_photo(message: Message, state: FSMContext) -> None:
 
 
 @router.message(F.text, ProfileForm.preferred_gender)
+@track_latency("process_preferred_gender")
 async def process_preferred_gender(message: Message, state: FSMContext) -> None:
     gender_map = {"Мужской": "Мужской", "Женский": "Женский", "Все равно": "Другое"}
     message.edit_reply_markup(reply_markup=None)
@@ -148,6 +160,7 @@ async def process_preferred_gender(message: Message, state: FSMContext) -> None:
 
 
 @router.message(F.text, ProfileForm.preferred_age_min)
+@track_latency("process_preferred_age_min")
 async def process_preferred_age_min(message: Message, state: FSMContext) -> None:
     if message.text and message.text.isdigit():
         preferred_age_min = int(message.text)
@@ -168,6 +181,7 @@ async def process_preferred_age_min(message: Message, state: FSMContext) -> None
 
 
 @router.message(F.text, ProfileForm.preferred_age_max)
+@track_latency("process_preferred_age_max")
 async def process_preferred_age_max(message: Message, state: FSMContext) -> None:
 
     if message.text and message.text.isdigit():
@@ -194,6 +208,7 @@ async def process_preferred_age_max(message: Message, state: FSMContext) -> None
 
 
 @router.message(F.text, ProfileForm.preferred_city)
+@track_latency("process_preferred_city")
 async def process_preferred_city(message: Message, state: FSMContext) -> None:
     await state.update_data(preferred_city=message.text)
 
@@ -223,6 +238,7 @@ async def process_preferred_city(message: Message, state: FSMContext) -> None:
 
 
 @router.callback_query(F.data == "correct", ProfileForm.profile_filled)
+@track_latency("create_form_correct")
 async def create_form_correct(call: CallbackQuery, state: FSMContext) -> None:
     async with channel_pool.acquire() as channel:
         exchange = await channel.declare_exchange(
@@ -253,7 +269,6 @@ async def create_form_correct(call: CallbackQuery, state: FSMContext) -> None:
 
         await exchange.publish(aio_pika.Message(msgpack.packb(body)), "user_messages")
         SEND_MESSAGE.inc()
-        NEW_PROFILES.inc()
 
     if isinstance(call.message, Message):
         await call.answer("Данные сохранены")
@@ -265,6 +280,7 @@ async def create_form_correct(call: CallbackQuery, state: FSMContext) -> None:
 
 
 @router.callback_query(F.data == "incorrect", ProfileForm.check_state)
+@track_latency("create_form_incorrect")
 async def create_form_incorrect(call: CallbackQuery, state: FSMContext) -> None:
     if isinstance(call.message, Message):
         await call.answer("Заново создаем анкету")

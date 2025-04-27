@@ -1,23 +1,15 @@
-import re
-
 import aio_pika
 import msgpack
 from aio_pika import ExchangeType
 from aiogram import F
 from aiogram.fsm.context import FSMContext
-from aiogram.types import (
-    CallbackQuery,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    KeyboardButton,
-    Message,
-    ReplyKeyboardMarkup,
-)
+from aiogram.types import (CallbackQuery, InlineKeyboardButton,
+                           InlineKeyboardMarkup, Message)
 
 from config.settings import settings
 from src.handlers.callback.router import router
-from src.handlers.command.gender import gender_keyboard
 from src.handlers.state.change_form import EditProfileForm
+from src.metrics import SEND_MESSAGE, track_latency
 from src.storage.minio import minio_client
 from src.storage.rabbit import channel_pool
 
@@ -40,6 +32,7 @@ edit_menu_keyboard = InlineKeyboardMarkup(
 
 
 @router.callback_query(F.data == "change_form")
+@track_latency("start_editing")
 async def start_editing(call: CallbackQuery, state: FSMContext):
     await call.message.answer(
         "Что вы хотите изменить?", reply_markup=edit_menu_keyboard
@@ -84,12 +77,14 @@ async def choose_field_to_edit(call: CallbackQuery, state: FSMContext):
 
 
 @router.message(EditProfileForm.name)
+@track_latency("edit_name")
 async def edit_name(message: Message, state: FSMContext):
     await state.update_data(name=message.text)
     await back_to_edit_menu(message, state)
 
 
 @router.message(EditProfileForm.age)
+@track_latency("edit_age")
 async def edit_age(message: Message, state: FSMContext):
     if message.text.isdigit():
         await state.update_data(age=int(message.text))
@@ -99,6 +94,7 @@ async def edit_age(message: Message, state: FSMContext):
 
 
 @router.callback_query(EditProfileForm.gender)
+@track_latency("handle_gender_selection")
 async def handle_gender_selection(callback: CallbackQuery, state: FSMContext):
     gender_map = {
         "gender_male": "Мужской",
@@ -116,12 +112,14 @@ async def handle_gender_selection(callback: CallbackQuery, state: FSMContext):
 
 
 @router.message(EditProfileForm.city)
+@track_latency("edit_city")
 async def edit_city(message: Message, state: FSMContext):
     await state.update_data(city=message.text)
     await back_to_edit_menu(message, state)
 
 
 @router.message(EditProfileForm.interests)
+@track_latency("edit_interests")
 async def edit_interests(message: Message, state: FSMContext):
     interests = [i.strip() for i in message.text.split(",") if i.strip()]
     await state.update_data(interests=interests)
@@ -129,6 +127,7 @@ async def edit_interests(message: Message, state: FSMContext):
 
 
 @router.message(EditProfileForm.photo)
+@track_latency("edit_photo")
 async def edit_photo(message: Message, state: FSMContext):
     if message.photo:
         file_id = message.photo[-1].file_id
@@ -157,6 +156,7 @@ async def edit_photo(message: Message, state: FSMContext):
 
 
 @router.message(EditProfileForm.preferred_gender)
+@track_latency("edit_preferred_gender")
 async def edit_preferred_gender(message: Message, state: FSMContext):
     gender_map = {"Мужской": "Мужской", "Женский": "Женский", "Все равно": "Другое"}
     if message.text in gender_map:
@@ -170,6 +170,7 @@ async def edit_preferred_gender(message: Message, state: FSMContext):
 
 
 @router.message(EditProfileForm.preferred_age_min)
+@track_latency("edit_preferred_age_min")
 async def edit_preferred_age_min(message: Message, state: FSMContext):
     if message.text.isdigit():
         await state.update_data(preferred_age_min=int(message.text))
@@ -180,6 +181,7 @@ async def edit_preferred_age_min(message: Message, state: FSMContext):
 
 
 @router.message(EditProfileForm.preferred_age_max)
+@track_latency("edit_preferred_age_max")
 async def edit_preferred_age_max(message: Message, state: FSMContext):
     if message.text.isdigit():
         await state.update_data(preferred_age_max=int(message.text))
@@ -190,6 +192,7 @@ async def edit_preferred_age_max(message: Message, state: FSMContext):
 
 
 @router.message(EditProfileForm.preferred_city)
+@track_latency("edit_preferred_city")
 async def edit_preferred_city(message: Message, state: FSMContext):
     await state.update_data(preferred_city=message.text)
     await back_to_edit_menu(message, state)
@@ -220,6 +223,7 @@ async def save_updated_profile(call: CallbackQuery, state: FSMContext):
         await exchange.publish(
             aio_pika.Message(msgpack.packb(body)), routing_key="user_messages"
         )
+        SEND_MESSAGE.inc()
 
         await call.answer("Данные сохранены")
         await call.message.edit_reply_markup(reply_markup=None)
