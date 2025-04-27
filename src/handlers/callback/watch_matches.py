@@ -14,6 +14,8 @@ from src.handlers.command.menu import menu
 from src.handlers.state.like_profile import LikedProfilesFlow
 from src.handlers.state.show_next_user import show_next_liked_user
 from src.logger import LOGGING_CONFIG, logger
+from aiogram.filters import StateFilter
+
 from src.storage.rabbit import channel_pool
 
 
@@ -96,3 +98,7 @@ async def open_conversation_handler(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer("Не удалось определить пользователя.")
 
     await callback.answer()
+
+@router.callback_query(StateFilter(LikedProfilesFlow.viewing), F.data == "next_liked_user")
+async def next_liked_user_handler(callback: CallbackQuery, state: FSMContext):
+    await show_next_liked_user(callback, state)
