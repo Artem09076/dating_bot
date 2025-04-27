@@ -25,7 +25,10 @@ async def process_like_user(body: dict):
 
             if existing_like:
                 logger.info("НАЙДЕН СУЩЕСТВУЮЩИЙ ЛАЙК, ОБНОВЛЯЕМ", body)
-                existing_like.is_mutual = is_mutual
+                if existing_like.is_mutual == None and is_mutual == None:
+                    existing_like.is_mutual = True
+                else:
+                    existing_like.is_mutual = is_mutual
             else:
                 logger.info("СОЗДАЕМ НОВЫЙ ЛАЙК", body)
                 like = Like(
