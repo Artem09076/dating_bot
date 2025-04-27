@@ -13,7 +13,7 @@ from aiogram.types import (
     Message,
     ReplyKeyboardMarkup,
 )
-
+import logging.config
 from config.settings import settings
 from src.handlers.callback.router import router
 from src.handlers.command.gender import gender_keyboard
@@ -21,6 +21,9 @@ from src.handlers.state.made_form import ProfileForm
 from src.metrics import NEW_PROFILES, SEND_MESSAGE
 from src.storage.minio import minio_client
 from src.storage.rabbit import channel_pool
+from consumer.logger import LOGGING_CONFIG, logger
+
+logging.config.dictConfig(LOGGING_CONFIG)
 
 
 @router.callback_query(F.data == "make_form")
@@ -55,6 +58,7 @@ async def process_age(message: Message, state: FSMContext) -> None:
 
 @router.callback_query(F.data.startswith("gender_"), ProfileForm.gender)
 async def process_gender(callback: CallbackQuery, state: FSMContext) -> None:
+    
     gender_map = {
         "gender_male": "Мужской",
         "gender_female": "Женский",
@@ -62,6 +66,7 @@ async def process_gender(callback: CallbackQuery, state: FSMContext) -> None:
     }
 
     gender = gender_map.get(callback.data)
+    logger.info(f"ВЫБОР ГЕНДЕРА {gender}")
     if gender:
         await state.update_data(gender=gender)
         await callback.message.edit_reply_markup(reply_markup=None)
@@ -195,7 +200,7 @@ async def process_preferred_age_max(message: Message, state: FSMContext) -> None
 
 @router.message(F.text, ProfileForm.preferred_city)
 async def process_preferred_city(message: Message, state: FSMContext) -> None:
-    await state.update_data(preferred_city=message.text)
+    await state.update_data(preferred_city=message.text.lower())
 
     user_data = await state.get_data()
     caption = (

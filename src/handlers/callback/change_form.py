@@ -20,6 +20,9 @@ from src.handlers.command.gender import gender_keyboard
 from src.handlers.state.change_form import EditProfileForm
 from src.storage.minio import minio_client
 from src.storage.rabbit import channel_pool
+import logging.config
+from consumer.logger import LOGGING_CONFIG, logger
+
 
 edit_menu_keyboard = InlineKeyboardMarkup(
     inline_keyboard=[
@@ -39,11 +42,15 @@ edit_menu_keyboard = InlineKeyboardMarkup(
 )
 
 
+logging.config.dictConfig(LOGGING_CONFIG)
+
+
 @router.callback_query(F.data == "change_form")
 async def start_editing(call: CallbackQuery, state: FSMContext):
-    await call.message.answer(
+    msg = await call.message.answer(
         "Что вы хотите изменить?", reply_markup=edit_menu_keyboard
     )
+    await state.update_data(edit_message_id=msg.message_id)
     await state.set_state(EditProfileForm.choose_field)
 
 
@@ -106,13 +113,14 @@ async def handle_gender_selection(callback: CallbackQuery, state: FSMContext):
         "gender_other": "Другое",
     }
     gender = gender_map.get(callback.data)
-
+    logger.info(f"ИЗМЕНЕНИЕ ГЕНДЕРА {gender}")
     if gender:
         await state.update_data(gender=gender)
-        await callback.message.answer("✅ Пол обновлён!")
-        await state.set_state(EditProfileForm.confirm_changes)
+        await callback.answer("✅ Пол обновлён!")
+        await back_to_edit_menu(callback, state)
     else:
         await callback.answer("Некорректный выбор", show_alert=True)
+
 
 
 @router.message(EditProfileForm.city)
@@ -195,14 +203,34 @@ async def edit_preferred_city(message: Message, state: FSMContext):
     await back_to_edit_menu(message, state)
 
 
-async def back_to_edit_menu(message: Message, state: FSMContext):
-    await message.answer(
-        "Выберите, что хотите изменить еще:", reply_markup=edit_menu_keyboard
-    )
+async def back_to_edit_menu(call_or_message, state: FSMContext):
+    data = await state.get_data()
+    edit_message_id = data.get('edit_message_id')
+
+    text = "Выберите, что хотите изменить еще:"
+
+    if isinstance(call_or_message, CallbackQuery):
+        chat_id = call_or_message.message.chat.id
+        bot = call_or_message.bot
+    else:
+        chat_id = call_or_message.chat.id
+        bot = call_or_message.bot
+
+    try:
+        await bot.edit_message_text(
+            chat_id=chat_id,
+            message_id=edit_message_id,
+            text=text,
+            reply_markup=edit_menu_keyboard
+        )
+    except Exception as e:
+        logger.warning(f"Не удалось отредактировать сообщение: {e}")
+
     await state.set_state(EditProfileForm.choose_field)
 
 
 async def save_updated_profile(call: CallbackQuery, state: FSMContext):
+    logger.info(f"СОХРАНЕНИЕ Х2 ХУЙНИ")
     async with channel_pool.acquire() as channel:
         exchange = await channel.declare_exchange(
             "user_form", ExchangeType.TOPIC, durable=True
@@ -212,16 +240,29 @@ async def save_updated_profile(call: CallbackQuery, state: FSMContext):
 
         await user_queue.bind(exchange, "user_messages")
         user_data = await state.get_data()
+
         body = {
             **user_data,
             "id": call.from_user.id,
             "action": "update_form",
         }
+        logger.info(f"ИЗМЕНЕНИЕ ХУЙНИ {user_data}")
         await exchange.publish(
             aio_pika.Message(msgpack.packb(body)), routing_key="user_messages"
         )
 
+        edit_message_id = user_data.get("edit_message_id")
+        if edit_message_id:
+            try:
+                await call.bot.edit_message_reply_markup(
+                    chat_id=call.message.chat.id,
+                    message_id=edit_message_id,
+                    reply_markup=None
+                )
+            except Exception as e:
+                logger.warning(f"Не удалось удалить клавиатуру: {e}")
+
         await call.answer("Данные сохранены")
-        await call.message.edit_reply_markup(reply_markup=None)
         await call.message.answer("Анкета обновлена! ✅")
+
     await state.clear()

@@ -18,7 +18,7 @@ async def create_form(body: Dict[str, Any]) -> None:
                 id=body.get("id"),
                 name=body.get("name"),
                 age=body.get("age"),
-                gender=GenderEnum(body.get("preferred_gender")),
+                gender=GenderEnum(body.get("gender")),
                 city=body.get("city"),
                 interests=body.get("interests"),
                 photo=body.get("photo"),
@@ -27,7 +27,7 @@ async def create_form(body: Dict[str, Any]) -> None:
                 preferred_age_max=body.get("preferred_age_max"),
                 preferred_city=body.get("preferred_city"),
             )
-
+            logger.info(f"ДОБАВЛЕНИЕ АНКЕТЫ В БАЗУ {body}")
             db.add(user)
             await db.commit()
             await calculate_user_rating(body.get("id"), db)
