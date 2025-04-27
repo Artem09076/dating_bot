@@ -101,9 +101,9 @@ async def edit_age(message: Message, state: FSMContext):
 @router.callback_query(EditProfileForm.gender)
 async def handle_gender_selection(callback: CallbackQuery, state: FSMContext):
     gender_map = {
-        "gender_male": "male",
-        "gender_female": "female",
-        "gender_other": "other",
+        "gender_male": "Мужской",
+        "gender_female": "Женский",
+        "gender_other": "Другое",
     }
     gender = gender_map.get(callback.data)
 
@@ -158,7 +158,7 @@ async def edit_photo(message: Message, state: FSMContext):
 
 @router.message(EditProfileForm.preferred_gender)
 async def edit_preferred_gender(message: Message, state: FSMContext):
-    gender_map = {"Мужской": "male", "Женский": "female", "Все равно": "other"}
+    gender_map = {"Мужской": "Мужской", "Женский": "Женский", "Все равно": "Другое"}
     if message.text in gender_map:
         await state.update_data(preferred_gender=gender_map[message.text])
         await message.answer("Укажите минимальный возраст партнера:")
